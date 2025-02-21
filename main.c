@@ -1,8 +1,9 @@
 #include <gb/gb.h>
 #include <stdint.h>
 #include "splash_bg_asset.h"
-#include "snake_head.h"
+#include "snake_head_down.h"
 
+uint8_t joypadCurrent=0,joypadPrevious=0;
 
 void main(void)
 {
@@ -16,11 +17,13 @@ void main(void)
   // We deal with tiles that are 8px wide and 8px tall
   // 160/8 = 20 and 120/8=15
   set_bkg_tiles(0, 1, 20, 15, splash_bg_asset_map);
-  delay(1000);
+  while(!(joypad() & J_START)){vsync();}
+  //delay(1000);
+
 
   HIDE_BKG;
   SHOW_SPRITES;
-  set_sprite_data(0, 1, snake_head);
+  set_sprite_data(0, 1, snake_head_down);
   set_sprite_tile(0, 0);
   //move_sprite(0, 84, 88);
   set_sprite_prop(0, 0b01000000); /* vertical flip sprite */
@@ -38,6 +41,9 @@ void main(void)
 
   // Loop forever
   while (1) {
+
+    joypadPrevious=joypadCurrent;
+    joypadCurrent = joypad();
 
     // Game main loop processing goes here
     // Apply our velocity

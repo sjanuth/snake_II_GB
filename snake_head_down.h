@@ -1,6 +1,6 @@
 /*
 
- SNAKE_HEAD.H
+ SNAKE_HEAD_DOWN.H
 
  Include File.
 
@@ -22,14 +22,14 @@
 
 */
 
-#ifndef __snake_head_h_INCLUDE
-#define __snake_head_h_INCLUDE
+#ifndef __snake_head_down_h_INCLUDE
+#define __snake_head_down_h_INCLUDE
 
 /* Bank of tiles. */
-#define snake_headBank 0
+#define snake_head_downBank 0
 /* Start of tile array. */
-extern const unsigned char snake_head[];
+extern const unsigned char snake_head_down[];
 
 #endif
 
-/* End of SNAKE_HEAD.H */
+/* End of SNAKE_HEAD_DOWN.H */
