@@ -1,0 +1,24 @@
+{
+  "compilation": {
+    "compilers_to_recognize": [
+      {
+        "executable": "/home/sja/Programming/gbdk/bin/lcc",
+        "flags_to_add": ["-I/home/sja/Programming/gbdk/include"],
+        "flags_to_remove": ["-Wall"]
+      }
+    ],
+    "compilers_to_exclude": []
+  },
+  "output": {
+    "content": {
+      "include_only_existing_source": true,
+      "paths_to_include": [],
+      "paths_to_exclude": [],
+      "duplicate_filter_fields": "file_output"
+    },
+    "format": {
+      "command_as_array": true,
+      "drop_output_field": false
+    }
+  }
+}

@@ -4,8 +4,10 @@
 
 # If you move this project you can change the directory 
 # to match your GBDK root directory (ex: GBDK_HOME = "C:/GBDK/"
+# IMPORTANT: Use absolute paths here, otherwise bear will fail to genereate
+# compile_commands.json required for clangd to work properly
 ifndef GBDK_HOME
-	GBDK_HOME = ../../gbdk/
+	GBDK_HOME = /home/sja/Programming/gbdk/
 endif
 
 LCC = $(GBDK_HOME)bin/lcc 
@@ -17,7 +19,7 @@ endif
 
 
 # You can set the name of the .gb ROM file here
-PROJECTNAME    = Example
+PROJECTNAME    = Snake_3310_GB
 
 BINS	    = $(PROJECTNAME).gb
 CSOURCES   := $(wildcard *.c)
