@@ -12,7 +12,6 @@ typedef enum {
   RIGHT,
   DOWN,
   LEFT,
-  NONVALID
 }direction_type;
 
 enum{
@@ -23,7 +22,7 @@ enum{
 };
 
 direction_type snake_direction = RIGHT;
-direction_type dpad_direction = NONVALID;
+direction_type dpad_direction = RIGHT;
 /*  number of segments between head and tail */
 uint8_t snake_length = 0;
 uint8_t score = 0;
@@ -85,12 +84,11 @@ int main(void)
     else if((joypadCurrent & J_DOWN)){dpad_direction = DOWN;}
     else if((joypadCurrent & J_LEFT)){dpad_direction = LEFT;}
 
-    if (dpad_direction != NONVALID && !movement_pending){
+    if (!movement_pending){
       if (((dpad_direction + snake_direction) % 2) == 1){
         /*  Neither in current direction or opposite */
         snake_direction = dpad_direction;
         movement_pending = 1;
-        dpad_direction = NONVALID;
       }
     }
 
