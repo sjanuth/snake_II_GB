@@ -1,7 +1,7 @@
 #include <gb/gb.h>
 #include <stdint.h>
 #include "splash_bg_asset.h"
-#include "snake_head_down.h"
+#include "sprites/snake_head_down.h"
 
 uint8_t joypadCurrent=0,joypadPrevious=0;
 

@@ -22,19 +22,31 @@ endif
 PROJECTNAME    = Snake_3310_GB
 
 BINS	    = $(PROJECTNAME).gb
-CSOURCES   := $(wildcard *.c)
+SPRITESDIR  = sprites
+SPRITE_SOURCES := $(wildcard $(SPRITESDIR)/*.c)
+# Convert .c file paths into .o file paths (keeping them in sprites/)
+SPRITE_OBJ := $(SPRITE_SOURCES:.c=.o)
+C_ROOT_SOURCES   := $(wildcard *.c)
+CSOURCES = $(C_ROOT_SOURCES) $(SPRITE_SOURCES)
 ASMSOURCES := $(wildcard *.s)
 
-all:	$(BINS)
+all:	$(BINS) 
 
 compile.bat: Makefile
 	@echo "REM Automatically generated from Makefile" > compile.bat
 	@make -sn | sed y/\\//\\\\/ | sed s/mkdir\ \-p/mkdir/ | grep -v make >> compile.bat
 
+
 # Compile and link all source files in a single call to LCC
-$(BINS):	$(CSOURCES) $(ASMSOURCES)
+#
+$(BINS):	$(CSOURCES) $(ASMSOURCES) 
 	$(LCC) $(LCCFLAGS) -o $@ $(CSOURCES) $(ASMSOURCES)
+	
+# Compiles sprite assets in sprites directory
+$(SPRITESDIR)/%.o:	$(SPRITESDIR)/%.c
+	@echo "compile sprites"
+	$(LCC) $(LCCFLAGS) -o $@ $<
 
 clean:
-	rm -f *.o *.lst *.map *.gb *.ihx *.sym *.cdb *.adb *.asm *.noi *.rst
+	rm -f *.o *.lst *.map *.gb *.ihx *.sym *.cdb *.adb *.asm *.noi *.rst $(SRC_DIR)/*.o
 
