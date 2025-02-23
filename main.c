@@ -65,7 +65,7 @@ int main(void)
 
   set_sprite_prop(0, S_FLIPY);
 
-  int8_t velocity = 1;
+  int8_t velocity = 3;
 
   // Set the sprite's default position
   uint8_t spriteX = 80;
@@ -114,10 +114,10 @@ int main(void)
       }
       movement_pending = 0;
 
-    if (spriteX > 160 ){spriteX = 4; }
+    if (spriteX > 160 ){spriteX = 8; }
     else if(spriteX < 8){spriteX = 160;}
-    else if(spriteY < 16){spriteY = 144;}
-    else if(spriteY > 144){spriteY = 16;}
+    else if(spriteY < 16){spriteY = 144 + 8;}
+    else if(spriteY > 144 + 8){spriteY = 8;}
       // Position the first sprite at our spriteX and spriteY
       // All sprites are render 8 pixels to the left of their x position and 16
       // pixels ABOVE their actual y position This means an object rendered at 0,0
