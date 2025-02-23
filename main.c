@@ -31,7 +31,8 @@ direction_type snake_direction = RIGHT;
 direction_type dpad_direction = RIGHT;
 uint8_t head_sprite = SNAKE_HEAD_RIGHT_SPRITE;
 /*  number of segments between head and tail */
-uint8_t snake_length = 0;
+#define DEFAULT_LENGTH_START 5
+uint8_t snake_length = DEFAULT_LENGTH_START;
 uint8_t score = 0;
 
 int main(void)
