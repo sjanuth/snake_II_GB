@@ -1,42 +1,38 @@
+#include "snake_bckg.h"
+#include "snake_bckg_tileset.h"
+#include "splash_bg_asset.h"
 #include <gb/gb.h>
 #include <stdint.h>
-#include "splash_bg_asset.h"
-#include "sprites/snake_head_down.h"
-#include "sprites/snake_head_right.h"
-#include "sprites/snake_tail_down.h"
-#include "sprites/snake_tail_right.h"
 
-uint8_t joypadCurrent = 0, joypadPrevious = 0;
 typedef enum {
   UP,
   RIGHT,
   DOWN,
   LEFT,
-}direction_type;
+} direction_type;
 
-enum{
-  SNAKE_HEAD_DOWN_TILE,
+#define BACKGROUND_EMPTY_TILE 11
+#define GBP_FPS 60
+
+enum {
+  SNAKE_HEAD_UP_TILE,
   SNAKE_HEAD_RIGHT_TILE,
-  SNAKE_TAIL_DOWN_TILE,
-  SNAKE_TAIL_RIGHT_TILE
+  SNAKE_HEAD_DOWN_TILE,
+  SNAKE_HEAD_LEFT_TILE
 };
 
-enum{
-  SNAKE_HEAD_DOWN_SPRITE,
-  SNAKE_HEAD_RIGHT_SPRITE
-};
-
-
-direction_type snake_direction = RIGHT;
-direction_type dpad_direction = RIGHT;
-uint8_t head_sprite = SNAKE_HEAD_RIGHT_SPRITE;
 /*  number of segments between head and tail */
 #define DEFAULT_LENGTH_START 5
 uint8_t snake_length = DEFAULT_LENGTH_START;
 uint8_t score = 0;
 
-int main(void)
-{
+int main(void) {
+
+  uint8_t joypadCurrent = 0, joypadPrevious = 0;
+  direction_type snake_direction = RIGHT;
+  direction_type dpad_direction = RIGHT;
+  uint8_t snake_head_tile_to_render_on_bkg = SNAKE_HEAD_RIGHT_TILE;
+
   DISPLAY_ON;
   SHOW_BKG;
   SPRITES_8x8;
@@ -50,119 +46,97 @@ int main(void)
 
   /*  wait on splash screen until start button is pressed */
 #if 1
-    while(!(joypad() & J_START)){vsync();}
-#else
-    delay(1000);
-#endif
-
-  HIDE_BKG;
-  SPRITES_8x8;
-  SHOW_SPRITES;
-
-  set_sprite_data(SNAKE_HEAD_DOWN_TILE, 1, snake_head_down);
-  set_sprite_data(SNAKE_HEAD_RIGHT_TILE, 1, snake_head_right);
-  set_sprite_tile(SNAKE_HEAD_DOWN_SPRITE, SNAKE_HEAD_DOWN_TILE);
-  set_sprite_tile(SNAKE_HEAD_RIGHT_SPRITE, SNAKE_HEAD_RIGHT_TILE);
-
-#if 0
-  uint8_t i = 0;
-  for (i = 1; i < 160/8; i++){
-    set_sprite_tile(i, 0);
-    /*  max 10 sprites per line */
-    move_sprite(i,  8 *i , 16);
-
+  while (!(joypad() & J_START)) {
+    vsync();
   }
+#else
+  delay(1000);
 #endif
 
-  set_sprite_prop(0, S_FLIPY);
+  /*  reload background tiles */
+  set_bkg_data(0, 12, snake_bckg_tileset);
+  /*  main game background with borders */
+  set_bkg_tiles(0, 0, 20, 18, snake_bckg);
 
-  int8_t velocity = 9;
+  int8_t velocity = 2;
 
   // Set the sprite's default position
-  uint8_t spriteX = 80;
-  uint8_t spriteY = 72;
+  uint8_t spriteX = (160 / 8) / 2;
+  uint8_t spriteY = (144 / 8) / 2;
+
+  /*  flag to check if a movement is pending to get rendered
+   *  before catching a new one */
   uint8_t movement_pending = 0;
+
   /*  gets called at 60fps  */
   uint16_t update_screen_counter = 0;
 
   // Loop forever
   while (1) {
 
-    joypadPrevious=joypadCurrent;
+    joypadPrevious = joypadCurrent;
     joypadCurrent = joypad();
 
-    if(joypadCurrent & J_UP){dpad_direction = UP;}
-    else if((joypadCurrent & J_RIGHT)){dpad_direction = RIGHT;}
-    else if((joypadCurrent & J_DOWN)){dpad_direction = DOWN;}
-    else if((joypadCurrent & J_LEFT)){dpad_direction = LEFT;}
+    if (joypadCurrent & J_UP) {
+      dpad_direction = UP;
+    } else if ((joypadCurrent & J_RIGHT)) {
+      dpad_direction = RIGHT;
+    } else if ((joypadCurrent & J_DOWN)) {
+      dpad_direction = DOWN;
+    } else if ((joypadCurrent & J_LEFT)) {
+      dpad_direction = LEFT;
+    }
 
-    if (!movement_pending){
-      if (((dpad_direction + snake_direction) % 2) == 1){
+    if (!movement_pending) {
+      if (((dpad_direction + snake_direction) % 2) == 1) {
         /*  Neither in current direction or opposite */
         snake_direction = dpad_direction;
         movement_pending = 1;
       }
     }
 
+    if (update_screen_counter % (GBP_FPS / velocity) == 0) {
 
-    if(update_screen_counter % (60/velocity) == 0){
+      /*  before moving the snake tile in background, we must clear the current
+       * tile */
+      set_bkg_tile_xy(spriteX, spriteY, BACKGROUND_EMPTY_TILE);
 
       // Apply our velocity
-      switch(snake_direction){
-        case UP:
-          spriteY -=8;
-          break;
-        case LEFT:
-          spriteX -=8;
-          break;
-        case DOWN:
-          spriteY +=8;
-          break;
-        case RIGHT:
-          spriteX +=8;
-          break;
+      switch (snake_direction) {
+      case UP:
+        spriteY -= 1;
+        break;
+      case LEFT:
+        spriteX -= 1;
+        break;
+      case DOWN:
+        spriteY += 1;
+        break;
+      case RIGHT:
+        spriteX += 1;
+        break;
       }
 
-      if(movement_pending){
-        /*  direction has changed, so we must update the sprites */
-
-        switch (snake_direction) {
-          case UP:
-            head_sprite = SNAKE_HEAD_DOWN_SPRITE;
-            set_sprite_prop(SNAKE_HEAD_DOWN_SPRITE, S_FLIPY);
-            hide_sprite(SNAKE_HEAD_RIGHT_SPRITE);
-            break;
-
-          case RIGHT:
-            head_sprite = SNAKE_HEAD_RIGHT_SPRITE;
-            set_sprite_prop(SNAKE_HEAD_RIGHT_SPRITE, 0);
-            hide_sprite(SNAKE_HEAD_DOWN_SPRITE);
-            break;
-
-          case DOWN:
-            head_sprite = SNAKE_HEAD_DOWN_SPRITE;
-            set_sprite_prop(SNAKE_HEAD_DOWN_SPRITE, 0);
-            hide_sprite(SNAKE_HEAD_RIGHT_SPRITE);
-            break;
-
-          case LEFT:
-            head_sprite = SNAKE_HEAD_RIGHT_SPRITE;
-            set_sprite_prop(SNAKE_HEAD_RIGHT_SPRITE, S_FLIPX);
-            hide_sprite(SNAKE_HEAD_DOWN_SPRITE);
-            break;
-        }
+      if (movement_pending) {
+        snake_head_tile_to_render_on_bkg = snake_direction;
+        movement_pending = 0;
       }
-      movement_pending = 0;
 
-    if (spriteX > 160 ){spriteX = 8; }
-    else if(spriteX < 8){spriteX = 160;}
-    else if(spriteY < 16){spriteY = 144 + 8;}
-    else if(spriteY > 144 + 8){spriteY = 8;}
+      /* Check if snake has touched the borders  */
+      if (spriteX > 20 - 1 - 1) {
+        spriteX = 1;
+      } else if (spriteX < 1) {
+        spriteX = 20 - 1 - 1;
+      } else if (spriteY < 4) {
+        spriteY = 18 - 1 - 1;
+      } else if (spriteY > 18 - 1 - 1) {
+        spriteY = 4;
+      }
 
-    move_sprite(head_sprite, spriteX , spriteY );
-
+      set_bkg_tile_xy(spriteX, spriteY, snake_head_tile_to_render_on_bkg);
     }
     update_screen_counter++;
+
     // Done processing, yield CPU and wait for start of next frame
     vsync();
   }
