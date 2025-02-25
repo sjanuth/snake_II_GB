@@ -21,10 +21,21 @@ enum {
   SNAKE_HEAD_LEFT_TILE
 };
 
-/*  number of segments between head and tail */
-#define DEFAULT_LENGTH_START 5
-uint8_t snake_length = DEFAULT_LENGTH_START;
-uint8_t score = 0;
+typedef struct snake_node_s{
+  uint8_t tile_to_render;
+  uint8_t x_pos;
+  uint8_t y_pos;
+  struct snake_node_s * next_node;
+  struct snake_node_s * prev_node;
+}snake_node_t;
+
+typedef struct snake_s{
+  snake_node_t * head;
+  snake_node_t * tail;
+  uint8_t length;
+}snake_t;
+
+uint16_t score = 0;
 
 int main(void) {
 
@@ -36,6 +47,7 @@ int main(void) {
   DISPLAY_ON;
   SHOW_BKG;
   SPRITES_8x8;
+
   // Load & set our background data
   set_bkg_data(0, splash_bg_asset_TILE_COUNT, splash_bg_asset_tiles);
 
@@ -60,9 +72,31 @@ int main(void) {
 
   int8_t velocity = 2;
 
-  // Set the sprite's default position
-  uint8_t spriteX = (160 / 8) / 2;
-  uint8_t spriteY = (144 / 8) / 2;
+  /*  Instantiate our snake object */
+
+  snake_node_t snake_head = {
+    .x_pos = (160 / 8) / 2,
+    .y_pos = (144 / 8) / 2,
+    .prev_node = NULL,
+    .next_node = NULL,
+    .tile_to_render = SNAKE_HEAD_RIGHT_TILE,
+  };
+
+  snake_node_t snake_tail = {
+    .x_pos = ((160 / 8) / 2) - 1,
+    .y_pos = (144 / 8) / 2,
+    .prev_node = &snake_head,
+    .next_node = NULL,
+    .tile_to_render = SNAKE_HEAD_LEFT_TILE,
+  };
+
+  snake_head.next_node = &snake_tail;
+
+  snake_t snake = {
+    .length = 2,
+    .head = &snake_head,
+    .tail = &snake_tail, 
+  };
 
   /*  flag to check if a movement is pending to get rendered
    *  before catching a new one */
@@ -99,21 +133,20 @@ int main(void) {
 
       /*  before moving the snake tile in background, we must clear the current
        * tile */
-      set_bkg_tile_xy(spriteX, spriteY, BACKGROUND_EMPTY_TILE);
+      set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, BACKGROUND_EMPTY_TILE);
 
-      // Apply our velocity
       switch (snake_direction) {
       case UP:
-        spriteY -= 1;
+        snake.head->y_pos -= 1;
         break;
       case LEFT:
-        spriteX -= 1;
+        snake.head->x_pos -= 1;
         break;
       case DOWN:
-        spriteY += 1;
+        snake.head->y_pos += 1;
         break;
       case RIGHT:
-        spriteX += 1;
+        snake.head->x_pos += 1;
         break;
       }
 
@@ -123,17 +156,17 @@ int main(void) {
       }
 
       /* Check if snake has touched the borders  */
-      if (spriteX > 20 - 1 - 1) {
-        spriteX = 1;
-      } else if (spriteX < 1) {
-        spriteX = 20 - 1 - 1;
-      } else if (spriteY < 4) {
-        spriteY = 18 - 1 - 1;
-      } else if (spriteY > 18 - 1 - 1) {
-        spriteY = 4;
+      if (snake.head->x_pos > 20 - 1 - 1) {
+        snake.head->x_pos = 1;
+      } else if (snake.head->x_pos < 1) {
+        snake.head->x_pos = 20 - 1 - 1;
+      } else if (snake.head->y_pos < 4) {
+        snake.head->y_pos = 18 - 1 - 1;
+      } else if (snake.head->y_pos > 18 - 1 - 1) {
+        snake.head->y_pos = 4;
       }
 
-      set_bkg_tile_xy(spriteX, spriteY, snake_head_tile_to_render_on_bkg);
+      set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_head_tile_to_render_on_bkg);
     }
     update_screen_counter++;
 
