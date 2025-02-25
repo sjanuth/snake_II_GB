@@ -3,8 +3,9 @@
 #include "splash_bg_asset.h"
 #include "sprites/snake_head_down.h"
 #include "sprites/snake_head_right.h"
-#include "sprites/snake_tail_down.h"
-#include "sprites/snake_tail_right.h"
+//#include "sprites/snake_head_tileset.h"
+#include "snake_bckg_tileset.h"
+#include "snake_bckg.h"
 
 uint8_t joypadCurrent = 0, joypadPrevious = 0;
 typedef enum {
@@ -31,7 +32,8 @@ direction_type snake_direction = RIGHT;
 direction_type dpad_direction = RIGHT;
 uint8_t head_sprite = SNAKE_HEAD_RIGHT_SPRITE;
 /*  number of segments between head and tail */
-uint8_t snake_length = 0;
+#define DEFAULT_LENGTH_START 5
+uint8_t snake_length = DEFAULT_LENGTH_START;
 uint8_t score = 0;
 
 int main(void)
@@ -54,7 +56,11 @@ int main(void)
     delay(1000);
 #endif
 
-  HIDE_BKG;
+  /*  reload background tiles */
+  set_bkg_data(0, 12, snake_bckg_tileset);
+  /*  main game background with borders */
+  set_bkg_tiles(0, 0, 20, 18, snake_bckg);
+
   SPRITES_8x8;
   SHOW_SPRITES;
 
@@ -75,12 +81,16 @@ int main(void)
 
   set_sprite_prop(0, S_FLIPY);
 
-  int8_t velocity = 9;
+  int8_t velocity = 2;
 
   // Set the sprite's default position
   uint8_t spriteX = 80;
   uint8_t spriteY = 72;
+
+  /*  flag to check if a movement is pending to get rendered
+   *  before catching a new one */
   uint8_t movement_pending = 0;
+
   /*  gets called at 60fps  */
   uint16_t update_screen_counter = 0;
 
@@ -102,7 +112,6 @@ int main(void)
         movement_pending = 1;
       }
     }
-
 
     if(update_screen_counter % (60/velocity) == 0){
 
@@ -153,15 +162,17 @@ int main(void)
       }
       movement_pending = 0;
 
-    if (spriteX > 160 ){spriteX = 8; }
-    else if(spriteX < 8){spriteX = 160;}
-    else if(spriteY < 16){spriteY = 144 + 8;}
-    else if(spriteY > 144 + 8){spriteY = 8;}
+    /* Check if snake has touched the borders  */
+    if (spriteX > 160 - 8  ){spriteX = 16; }
+    else if(spriteX <= 8){spriteX = 160 - 8;}
+    else if(spriteY < (4*8) + 16){spriteY = 144;}
+    else if(spriteY > 144 ){spriteY = (4*8) + 16;}
 
     move_sprite(head_sprite, spriteX , spriteY );
 
     }
     update_screen_counter++;
+
     // Done processing, yield CPU and wait for start of next frame
     vsync();
   }
