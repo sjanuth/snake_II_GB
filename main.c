@@ -15,6 +15,8 @@ typedef enum {
   LEFT,
 }direction_type;
 
+#define BACKGROUND_EMPTY_TILE 11
+
 enum{
   SNAKE_HEAD_DOWN_TILE,
   SNAKE_HEAD_RIGHT_TILE,
@@ -31,6 +33,7 @@ enum{
 direction_type snake_direction = RIGHT;
 direction_type dpad_direction = RIGHT;
 uint8_t head_sprite = SNAKE_HEAD_RIGHT_SPRITE;
+uint8_t snake_head_tile_to_render_on_bkg = 1;
 /*  number of segments between head and tail */
 #define DEFAULT_LENGTH_START 5
 uint8_t snake_length = DEFAULT_LENGTH_START;
@@ -61,8 +64,7 @@ int main(void)
   /*  main game background with borders */
   set_bkg_tiles(0, 0, 20, 18, snake_bckg);
 
-  SPRITES_8x8;
-  SHOW_SPRITES;
+  //SHOW_SPRITES;
 
   set_sprite_data(SNAKE_HEAD_DOWN_TILE, 1, snake_head_down);
   set_sprite_data(SNAKE_HEAD_RIGHT_TILE, 1, snake_head_right);
@@ -84,8 +86,8 @@ int main(void)
   int8_t velocity = 2;
 
   // Set the sprite's default position
-  uint8_t spriteX = 80;
-  uint8_t spriteY = 72;
+  uint8_t spriteX = (160/8)/2;
+  uint8_t spriteY = (144/8)/2;
 
   /*  flag to check if a movement is pending to get rendered
    *  before catching a new one */
@@ -115,19 +117,22 @@ int main(void)
 
     if(update_screen_counter % (60/velocity) == 0){
 
+      /*  before moving the snake tile in background, we must clear the current tile */
+      set_bkg_tile_xy(spriteX, spriteY, BACKGROUND_EMPTY_TILE);
+
       // Apply our velocity
       switch(snake_direction){
         case UP:
-          spriteY -=8;
+          spriteY -=1;
           break;
         case LEFT:
-          spriteX -=8;
+          spriteX -=1;
           break;
         case DOWN:
-          spriteY +=8;
+          spriteY +=1;
           break;
         case RIGHT:
-          spriteX +=8;
+          spriteX +=1;
           break;
       }
 
@@ -139,36 +144,41 @@ int main(void)
             head_sprite = SNAKE_HEAD_DOWN_SPRITE;
             set_sprite_prop(SNAKE_HEAD_DOWN_SPRITE, S_FLIPY);
             hide_sprite(SNAKE_HEAD_RIGHT_SPRITE);
+            snake_head_tile_to_render_on_bkg = 0;
             break;
 
           case RIGHT:
             head_sprite = SNAKE_HEAD_RIGHT_SPRITE;
             set_sprite_prop(SNAKE_HEAD_RIGHT_SPRITE, 0);
             hide_sprite(SNAKE_HEAD_DOWN_SPRITE);
+            snake_head_tile_to_render_on_bkg = 1;
             break;
 
           case DOWN:
             head_sprite = SNAKE_HEAD_DOWN_SPRITE;
             set_sprite_prop(SNAKE_HEAD_DOWN_SPRITE, 0);
             hide_sprite(SNAKE_HEAD_RIGHT_SPRITE);
+            snake_head_tile_to_render_on_bkg = 2;
             break;
 
           case LEFT:
             head_sprite = SNAKE_HEAD_RIGHT_SPRITE;
             set_sprite_prop(SNAKE_HEAD_RIGHT_SPRITE, S_FLIPX);
             hide_sprite(SNAKE_HEAD_DOWN_SPRITE);
+            snake_head_tile_to_render_on_bkg = 3;
             break;
         }
       }
       movement_pending = 0;
 
     /* Check if snake has touched the borders  */
-    if (spriteX > 160 - 8  ){spriteX = 16; }
-    else if(spriteX <= 8){spriteX = 160 - 8;}
-    else if(spriteY < (4*8) + 16){spriteY = 144;}
-    else if(spriteY > 144 ){spriteY = (4*8) + 16;}
+    if (spriteX > 20 - 1 -1   ){spriteX = 1; }
+    else if(spriteX < 1){spriteX = 20 - 1 -1 ;}
+    else if(spriteY < 4 ){spriteY = 18 -1 -1 ;}
+    else if(spriteY > 18 -1 -1){spriteY = 4 ;}
 
-    move_sprite(head_sprite, spriteX , spriteY );
+    set_bkg_tile_xy(spriteX, spriteY, snake_head_tile_to_render_on_bkg);
+    //move_sprite(head_sprite, spriteX , spriteY );
 
     }
     update_screen_counter++;
