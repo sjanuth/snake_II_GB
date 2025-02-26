@@ -6,8 +6,6 @@
 #include <gb/gb.h>
 #include <stdint.h>
 
-/* Prototypes */
-
 /* Definitions and globals variables */
 
 #define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
@@ -19,14 +17,8 @@
 
 /*  Since the GB has very limited RAM, using heap will lead to fragmented memory.
  *  Thus, we use a memory pool for nodes */
+
 snake_node_t node_pool[MAX_NODES];
-
-
-typedef struct snake_s {
-  snake_node_t *head;
-  snake_node_t *tail;
-  uint8_t length;
-} snake_t;
 
 
 uint16_t score = 0;
