@@ -1,4 +1,5 @@
 #include "main.h"
+#include "snake.h"
 #include "snake_bckg.h"
 #include "snake_bckg_tileset.h"
 #include "splash_bg_asset.h"
@@ -14,65 +15,12 @@
 #define GBP_FPS 60
 #define STARTPOS_X ((160 / 8) / 2)
 #define STARTPOS_Y ((144 / 8) / 2)
-#define PLAYFIELD_WIDTH ((160 / 8) - 1 - 1)
 #define PLAYFIELD_Y_OFFSET (4) /*  2 tiles for score, 1 tile for border, 1 tile for grid */
-#define PLAYFIELD_HEIGHT ((144 / 8) - 1 - 1)
-
-enum {
-  SNAKE_HEAD_UP_TILE,
-  SNAKE_HEAD_RIGHT_TILE,
-  SNAKE_HEAD_DOWN_TILE,
-  SNAKE_HEAD_LEFT_TILE
-};
-
-enum {
-  SNAKE_BODY_UP_DOWN = 12,
-  SNAKE_BODY_LEFT_RIGHT,
-  SNAKE_BODY_UP_RIGHT,
-  SNAKE_BODY_RIGHT_DOWN,
-  SNAKE_BODY_DOWN_LEFT,
-  SNAKE_BODY_LEFT_UP,
-  SNAKE_BODY_FOOD_EATEN,
-  SNAKE_FOOD,
-  SNAKE_TAIL_UP,
-  SNAKE_TAIL_RIGHT,
-  SNAKE_TAIL_DOWN,
-  SNAKE_TAIL_LEFT,
-  SNAKE_MOUTH_OPEN_RIGHT,
-  SNAKE_MOUTH_OPEN_DOWN,
-  SNAKE_MOUTH_OPEN_LEFT,
-  SNAKE_MOUTH_OPEN_UP,
-};
-
-typedef struct snake_node_s {
-  uint8_t tile_to_render;
-  uint8_t x_pos;
-  uint8_t y_pos;
-  struct snake_node_s *next_node;
-  struct snake_node_s *prev_node;
-  direction_type dir_to_next_node;
-  uint8_t active;
-} snake_node_t;
 
 /*  Since the GB has very limited RAM, using heap will lead to fragmented memory.
  *  Thus, we use a memory pool for nodes */
-#define MAX_NODES (PLAYFIELD_WIDTH * PLAYFIELD_HEIGHT)
 snake_node_t node_pool[MAX_NODES];
 
-snake_node_t *allocateNode() {
-  uint16_t i;
-  for (i = 0; i < MAX_NODES; i++) {
-    if (!node_pool[i].active) {
-      node_pool[i].active = 1;
-      return &node_pool[i];
-    }
-  }
-  return NULL;
-}
-
-void freeNode(snake_node_t* obj) {
-    obj->active = 0;
-}
 
 typedef struct snake_s {
   snake_node_t *head;
