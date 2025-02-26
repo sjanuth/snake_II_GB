@@ -26,10 +26,10 @@ enum {
 enum {
   SNAKE_BODY_UP_DOWN = 12,
   SNAKE_BODY_LEFT_RIGHT,
-  SNAKE_BODY_UP_LEFT,
-  SNAKE_BODY_LEFT_DOWN,
-  SNAKE_BODY_DOWN_RIGHT,
-  SNAKE_BODY_RIGHT_UP,
+  SNAKE_BODY_UP_RIGHT,
+  SNAKE_BODY_RIGHT_DOWN,
+  SNAKE_BODY_DOWN_LEFT,
+  SNAKE_BODY_LEFT_UP,
   SNAKE_BODY_FOOD_EATEN,
   SNAKE_FOOD,
   SNAKE_TAIL_RIGHT,
@@ -48,6 +48,7 @@ typedef struct snake_node_s{
   uint8_t y_pos;
   struct snake_node_s * next_node;
   struct snake_node_s * prev_node;
+  direction_type dir_to_next_node;
 }snake_node_t;
 
 typedef struct snake_s{
@@ -63,7 +64,6 @@ void main(void) {
   uint8_t joypadCurrent = 0, joypadPrevious = 0;
   direction_type snake_direction = RIGHT;
   direction_type dpad_direction = RIGHT;
-  uint8_t snake_head_tile_to_render_on_bkg = SNAKE_HEAD_RIGHT_TILE;
 
   DISPLAY_ON;
   SHOW_BKG;
@@ -101,6 +101,7 @@ void main(void) {
     .prev_node = NULL,
     .next_node = NULL,
     .tile_to_render = SNAKE_HEAD_RIGHT_TILE,
+    .dir_to_next_node = LEFT,
   };
 
   snake_node_t snake_first_node = {
@@ -109,6 +110,7 @@ void main(void) {
     .prev_node = &snake_head,
     .next_node = NULL,
     .tile_to_render = SNAKE_BODY_LEFT_RIGHT,
+    .dir_to_next_node = LEFT,
   };
 
   snake_head.next_node = &snake_first_node;
@@ -119,6 +121,7 @@ void main(void) {
     .prev_node = &snake_first_node,
     .next_node = NULL,
     .tile_to_render = SNAKE_BODY_LEFT_RIGHT,
+    .dir_to_next_node = LEFT,
   };
 
   snake_first_node.next_node = &snake_second_node;
@@ -136,7 +139,7 @@ void main(void) {
   snake_t snake = {
     .length = 4,
     .head = &snake_head,
-    .tail = &snake_tail, 
+    .tail = &snake_tail,
   };
 
   /*  render the snake for the first time */
@@ -187,8 +190,8 @@ void main(void) {
 
       set_bkg_tile_xy(tmp_x, tmp_y, BACKGROUND_EMPTY_TILE);
 
-      /*  instead of moving and updating every node in the linked list, 
-       *  we just insert a new node after the head and remove the node before 
+      /*  instead of moving and updating every node in the linked list,
+       *  we just insert a new node after the head and remove the node before
        *  the tail.*/
 
       snake_node_t new_node = {
@@ -199,11 +202,60 @@ void main(void) {
         .prev_node = snake.head
       };
 
+      /* find which snake body tile must get rendered */
+      direction_type dir_n = snake.head->dir_to_next_node;
+
+      /*  direction no next node is opposite to current moving direction */
+      direction_type opposite_dir = (snake_direction + 2) % 4;
+      snake.head->dir_to_next_node = opposite_dir;
+
+      if (snake_direction == UP && dir_n == DOWN){
+        new_node.tile_to_render = SNAKE_BODY_UP_DOWN;
+      }
+      else if (snake_direction == RIGHT && dir_n == DOWN){
+        new_node.tile_to_render = SNAKE_BODY_RIGHT_DOWN;
+      }
+      else if (snake_direction == LEFT && dir_n == DOWN){
+        new_node.tile_to_render = SNAKE_BODY_DOWN_LEFT;
+      }
+
+
+      else if (snake_direction == UP && dir_n == RIGHT){
+        new_node.tile_to_render = SNAKE_BODY_UP_RIGHT;
+      }
+      else if (snake_direction == LEFT && dir_n == RIGHT){
+        new_node.tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+      }
+      else if (snake_direction == DOWN && dir_n == RIGHT){
+        new_node.tile_to_render = SNAKE_BODY_RIGHT_DOWN;
+      }
+
+
+      else if (snake_direction == UP && dir_n == LEFT){
+        new_node.tile_to_render = SNAKE_BODY_LEFT_UP;
+      }
+      else if (snake_direction == RIGHT && dir_n == LEFT){
+        new_node.tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+      }
+      else if (snake_direction == DOWN && dir_n == LEFT){
+        new_node.tile_to_render = SNAKE_BODY_DOWN_LEFT;
+      }
+
+      else if (snake_direction == LEFT && dir_n == UP){
+        new_node.tile_to_render = SNAKE_BODY_LEFT_UP;
+      }
+      else if (snake_direction == RIGHT && dir_n == UP){
+        new_node.tile_to_render = SNAKE_BODY_UP_RIGHT;
+      }
+      else if (snake_direction == DOWN && dir_n == UP){
+        new_node.tile_to_render = SNAKE_BODY_UP_DOWN;
+      }
+
+      /* inject new node */
       snake.head->next_node->prev_node = &new_node;
       snake.head->next_node = &new_node;
-      
-      // TODO: find which tile must get rendered
-      new_node.tile_to_render = ;
+
+      /* update coordinates for the head */
 
       switch (snake_direction) {
       case UP:
@@ -220,12 +272,8 @@ void main(void) {
         break;
       }
 
-      if (movement_pending) {
-        snake_head_tile_to_render_on_bkg = snake_direction;
-        movement_pending = 0;
-      }
-
       /* Check if snake has touched the borders  */
+
       if (snake.head->x_pos > 20 - 1 - 1) {
         snake.head->x_pos = 1;
       } else if (snake.head->x_pos < 1) {
@@ -236,11 +284,19 @@ void main(void) {
         snake.head->y_pos = 4;
       }
 
-      set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_head_tile_to_render_on_bkg);
+      /*  toggle the flag and indicate that we have rendered the tile and can process a new direction */
+
+      if (movement_pending) {
+        movement_pending = 0;
+      }
+
+      set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_direction);
+      snake_node_t *node_after_head = snake.head->next_node;
+      set_bkg_tile_xy(node_after_head->x_pos, node_after_head->y_pos, node_after_head->tile_to_render);
     }
     update_screen_counter++;
 
-    // Done processing, yield CPU and wait for start of next frame
+    /* Done processing, yield CPU and wait for start of next frame */
     vsync();
   }
 }
