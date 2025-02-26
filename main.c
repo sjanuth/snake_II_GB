@@ -79,7 +79,7 @@ void main(void) {
 
   /*  wait on splash screen until start button is pressed */
 #if 1
-  while (!(joypad() & J_START)) {
+  while (!(joypad() & (J_START | J_A | J_B))) {
     vsync();
   }
 #else
@@ -150,14 +150,14 @@ void main(void) {
       node_to_render = node_to_render->next_node;
   }
 
-  /*  flag to check if a movement is pending to get rendered
-   *  before catching a new one */
+  /*  Flag to check if a movement is pending to get rendered before catching a new one */
+
   uint8_t movement_pending = 0;
 
-  /*  gets called at 60fps  */
+  /*  Gets called at 60fps  */
+
   uint16_t update_screen_counter = 0;
 
-  // Loop forever
   while (1) {
 
     joypadPrevious = joypadCurrent;
@@ -183,16 +183,15 @@ void main(void) {
 
     if (update_screen_counter % (GBP_FPS / velocity) == 0) {
 
-      /*  before moving the snake tile in background, we must clear the current tile */
+      /*  Before moving the snake tile in background, we must clear the current tile */
 
       uint8_t tmp_x = snake.head->x_pos;
       uint8_t tmp_y = snake.head->y_pos;
 
       set_bkg_tile_xy(tmp_x, tmp_y, BACKGROUND_EMPTY_TILE);
 
-      /*  instead of moving and updating every node in the linked list,
-       *  we just insert a new node after the head and remove the node before
-       *  the tail.*/
+      /*  Instead of moving and updating every node in the linked list,
+       *  we just insert a new node after the head and remove the node before the tail.*/
 
       snake_node_t new_node = {
         .x_pos = tmp_x,
@@ -203,9 +202,11 @@ void main(void) {
       };
 
       /* find which snake body tile must get rendered */
+
       direction_type dir_n = snake.head->dir_to_next_node;
 
       /*  direction no next node is opposite to current moving direction */
+
       direction_type opposite_dir = (snake_direction + 2) % 4;
       snake.head->dir_to_next_node = opposite_dir;
 
@@ -252,6 +253,7 @@ void main(void) {
       }
 
       /* inject new node */
+
       snake.head->next_node->prev_node = &new_node;
       snake.head->next_node = &new_node;
 
@@ -289,6 +291,8 @@ void main(void) {
       if (movement_pending) {
         movement_pending = 0;
       }
+
+      /*  Update background tiles */
 
       set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_direction);
       snake_node_t *node_after_head = snake.head->next_node;
