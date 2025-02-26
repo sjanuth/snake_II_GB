@@ -13,12 +13,33 @@ typedef enum {
 
 #define BACKGROUND_EMPTY_TILE 11
 #define GBP_FPS 60
+#define STARTPOS_X ((160 / 8) / 2)
+#define STARTPOS_Y ((144 / 8) / 2)
 
 enum {
   SNAKE_HEAD_UP_TILE,
   SNAKE_HEAD_RIGHT_TILE,
   SNAKE_HEAD_DOWN_TILE,
   SNAKE_HEAD_LEFT_TILE
+};
+
+enum {
+  SNAKE_BODY_UP_DOWN = 12,
+  SNAKE_BODY_LEFT_RIGHT,
+  SNAKE_BODY_UP_LEFT,
+  SNAKE_BODY_LEFT_DOWN,
+  SNAKE_BODY_DOWN_RIGHT,
+  SNAKE_BODY_RIGHT_UP,
+  SNAKE_BODY_FOOD_EATEN,
+  SNAKE_FOOD,
+  SNAKE_TAIL_RIGHT,
+  SNAKE_TAIL_DOWN,
+  SNAKE_TAIL_LEFT,
+  SNAKE_TAIL_UP,
+  SNAKE_MOUTH_OPEN_RIGHT,
+  SNAKE_MOUTH_OPEN_DOWN,
+  SNAKE_MOUTH_OPEN_LEFT,
+  SNAKE_MOUTH_OPEN_UP,
 };
 
 typedef struct snake_node_s{
@@ -37,7 +58,7 @@ typedef struct snake_s{
 
 uint16_t score = 0;
 
-int main(void) {
+void main(void) {
 
   uint8_t joypadCurrent = 0, joypadPrevious = 0;
   direction_type snake_direction = RIGHT;
@@ -66,37 +87,65 @@ int main(void) {
 #endif
 
   /*  reload background tiles */
-  set_bkg_data(0, 12, snake_bckg_tileset);
+  set_bkg_data(0, 28, snake_bckg_tileset);
   /*  main game background with borders */
   set_bkg_tiles(0, 0, 20, 18, snake_bckg);
 
   int8_t velocity = 2;
 
-  /*  Instantiate our snake object */
+  /*  Instantiate our snake object and create nodes */
 
   snake_node_t snake_head = {
-    .x_pos = (160 / 8) / 2,
-    .y_pos = (144 / 8) / 2,
+    .x_pos = STARTPOS_X,
+    .y_pos = STARTPOS_Y,
     .prev_node = NULL,
     .next_node = NULL,
     .tile_to_render = SNAKE_HEAD_RIGHT_TILE,
   };
 
-  snake_node_t snake_tail = {
-    .x_pos = ((160 / 8) / 2) - 1,
-    .y_pos = (144 / 8) / 2,
+  snake_node_t snake_first_node = {
+    .x_pos = STARTPOS_X - 1,
+    .y_pos = STARTPOS_Y,
     .prev_node = &snake_head,
     .next_node = NULL,
-    .tile_to_render = SNAKE_HEAD_LEFT_TILE,
+    .tile_to_render = SNAKE_BODY_LEFT_RIGHT,
   };
 
-  snake_head.next_node = &snake_tail;
+  snake_head.next_node = &snake_first_node;
+
+  snake_node_t snake_second_node = {
+    .x_pos = STARTPOS_X - 2,
+    .y_pos = STARTPOS_Y,
+    .prev_node = &snake_first_node,
+    .next_node = NULL,
+    .tile_to_render = SNAKE_BODY_LEFT_RIGHT,
+  };
+
+  snake_first_node.next_node = &snake_second_node;
+
+  snake_node_t snake_tail = {
+    .x_pos = STARTPOS_X - 3,
+    .y_pos = STARTPOS_Y,
+    .prev_node = &snake_second_node,
+    .next_node = NULL,
+    .tile_to_render = SNAKE_TAIL_RIGHT,
+  };
+
+  snake_second_node.next_node = &snake_tail;
 
   snake_t snake = {
-    .length = 2,
+    .length = 4,
     .head = &snake_head,
     .tail = &snake_tail, 
   };
+
+  /*  render the snake for the first time */
+
+  snake_node_t * node_to_render = snake.head;
+  while (node_to_render != NULL) {
+      set_bkg_tile_xy(node_to_render->x_pos, node_to_render->y_pos, node_to_render->tile_to_render);
+      node_to_render = node_to_render->next_node;
+  }
 
   /*  flag to check if a movement is pending to get rendered
    *  before catching a new one */
@@ -131,9 +180,30 @@ int main(void) {
 
     if (update_screen_counter % (GBP_FPS / velocity) == 0) {
 
-      /*  before moving the snake tile in background, we must clear the current
-       * tile */
-      set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, BACKGROUND_EMPTY_TILE);
+      /*  before moving the snake tile in background, we must clear the current tile */
+
+      uint8_t tmp_x = snake.head->x_pos;
+      uint8_t tmp_y = snake.head->y_pos;
+
+      set_bkg_tile_xy(tmp_x, tmp_y, BACKGROUND_EMPTY_TILE);
+
+      /*  instead of moving and updating every node in the linked list, 
+       *  we just insert a new node after the head and remove the node before 
+       *  the tail.*/
+
+      snake_node_t new_node = {
+        .x_pos = tmp_x,
+        .y_pos = tmp_y,
+        .tile_to_render = BACKGROUND_EMPTY_TILE,
+        .next_node = snake.head->next_node,
+        .prev_node = snake.head
+      };
+
+      snake.head->next_node->prev_node = &new_node;
+      snake.head->next_node = &new_node;
+      
+      // TODO: find which tile must get rendered
+      new_node.tile_to_render = ;
 
       switch (snake_direction) {
       case UP:
@@ -173,5 +243,4 @@ int main(void) {
     // Done processing, yield CPU and wait for start of next frame
     vsync();
   }
-  return 0;
 }

@@ -1,8 +1,8 @@
 /*
 
- SNAKE_HEAD_DOWN.C
+ SNAKE_BCKG_TILESET.H
 
- Tile Source File.
+ Include File.
 
  Info:
   Form                 : All tiles as one unit.
@@ -10,7 +10,7 @@
   Compression          : None.
   Counter              : None.
   Tile size            : 8 x 8
-  Tiles                : 0 to 0
+  Tiles                : 0 to 27
 
   Palette colors       : None.
   SGB Palette          : None.
@@ -22,11 +22,14 @@
 
 */
 
-/* Start of tile array. */
-const unsigned char snake_head_down[] =
-{
-  0xCC,0xCC,0xCC,0xCC,0x3C,0x3C,0x3C,0x3C,
-  0x3C,0x3C,0x3C,0x3C,0x00,0x00,0x00,0x00
-};
+#ifndef __snake_bckg_tileset_h_INCLUDE
+#define __snake_bckg_tileset_h_INCLUDE
 
-/* End of SNAKE_HEAD_DOWN.C */
+/* Bank of tiles. */
+#define snake_bckg_tilesetBank 0
+/* Start of tile array. */
+extern const unsigned char snake_bckg_tileset[];
+
+#endif
+
+/* End of SNAKE_BCKG_TILESET.H */
