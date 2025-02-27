@@ -2,24 +2,36 @@
 #include "snake.h"
 #include "snake_bckg.h"
 #include "snake_bckg_tileset.h"
+#include "sprites/food.h"
 #include "splash_bg_asset.h"
 #include <gb/gb.h>
 #include <stdint.h>
+#include <rand.h>
 
 /* Definitions and globals variables */
 
 #define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
+/*  2 tiles for score, 1 tile for border, 1 tile for grid */
+#define PLAYFIELD_Y_OFFSET (4)
+/*  The plafield has the coordinates
+ *  x = [0 -17]
+ *  y = [0- 12]*/
+#define PLAYFIELD_TO_SPRITE_X_POS(X) ((X*8) + 16)
+#define PLAYFIELD_TO_SPRITE_Y_POS(Y) ((4 * 8) + 16 + (8 * Y))
+#define PLAYFIELD_TO_GLOBAL_X_POS(X) (X + 1) /* border */
+#define PLAYFIELD_TO_GLOBAL_Y_POS(Y) (Y + PLAYFIELD_Y_OFFSET) /* borders + 2 for score */
+#define PLAYFIELD_X_MAX (17)
+#define PLAYFIELD_Y_MAX (12)
 #define BACKGROUND_EMPTY_TILE 11
 #define GBP_FPS 60
 #define STARTPOS_X ((160 / 8) / 2)
 #define STARTPOS_Y ((144 / 8) / 2)
-#define PLAYFIELD_Y_OFFSET (4) /*  2 tiles for score, 1 tile for border, 1 tile for grid */
+#define FOOD_SPRITE 0
 
-/*  Since the GB has very limited RAM, using heap will lead to fragmented memory.
- *  Thus, we use a memory pool for nodes */
 
+/*  Since the GB has very limited RAM, using heap will lead to fragmented
+ * memory. Thus, we use a memory pool for nodes */
 snake_node_t node_pool[MAX_NODES];
-
 
 uint16_t score = 0;
 
@@ -31,17 +43,19 @@ void main(void) {
 
   DISPLAY_ON;
   SHOW_BKG;
+  SHOW_SPRITES;
   SPRITES_8x8;
 
-  // Load & set our background data
   set_bkg_data(0, splash_bg_asset_TILE_COUNT, splash_bg_asset_tiles);
 
-  // The gameboy screen is 160px wide by 144px tall
-  // We deal with tiles that are 8px wide and 8px tall
-  // 160/8 = 20 and 120/8=15
+  /* The gameboy screen is 160px wide by 144px tall
+   * We deal with tiles that are 8px wide and 8px tall
+   * 160/8 = 20 and 120/8=15 */
+
   set_bkg_tiles(0, 1, 20, 15, splash_bg_asset_map);
 
   /*  wait on splash screen until start button is pressed */
+
 #if 1
   while (!(joypad() & (J_START | J_A | J_B))) {
     vsync();
@@ -50,57 +64,62 @@ void main(void) {
   delay(1000);
 #endif
 
-  /*  reload background tiles */
+  initrand(DIV_REG); /* Seed with the Game Boy's divider register */
+
+  /*  reload background tiles for main game */
   set_bkg_data(0, 28, snake_bckg_tileset);
   /*  main game background with borders */
   set_bkg_tiles(0, 0, 20, 18, snake_bckg);
+
+  set_sprite_data(FOOD_SPRITE, 1, food);
+  set_sprite_prop(FOOD_SPRITE, 0);
+
 
   int8_t velocity = 2;
 
   /*  Instantiate our snake object and create nodes */
 
-  snake_node_t * snake_head = allocateNode();
-  if(snake_head)
-  {
-      snake_head->x_pos = STARTPOS_X;
-      snake_head->y_pos = STARTPOS_Y;
-      snake_head->prev_node = NULL;
-      snake_head->next_node = NULL;
-      snake_head->tile_to_render = SNAKE_HEAD_RIGHT_TILE;
-      snake_head->dir_to_next_node = LEFT;
+  snake_node_t *snake_head = allocateNode();
+  if (snake_head) {
+    snake_head->x_pos = STARTPOS_X;
+    snake_head->y_pos = STARTPOS_Y;
+    snake_head->prev_node = NULL;
+    snake_head->next_node = NULL;
+    snake_head->tile_to_render = SNAKE_HEAD_RIGHT_TILE;
+    snake_head->dir_to_next_node = LEFT;
   };
 
-  snake_node_t * snake_first_node = allocateNode();
-  if(snake_first_node){
-      snake_first_node->x_pos = STARTPOS_X - 1;
-      snake_first_node->y_pos = STARTPOS_Y;
-      snake_first_node->prev_node = snake_head;
-      snake_first_node->next_node = NULL;
-      snake_first_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
-      snake_first_node->dir_to_next_node = LEFT;
+  snake_node_t *snake_first_node = allocateNode();
+  if (snake_first_node) {
+    snake_first_node->x_pos = STARTPOS_X - 1;
+    snake_first_node->y_pos = STARTPOS_Y;
+    snake_first_node->prev_node = snake_head;
+    snake_first_node->next_node = NULL;
+    snake_first_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+    snake_first_node->dir_to_next_node = LEFT;
   };
 
   snake_head->next_node = snake_first_node;
 
   snake_node_t *snake_second_node = allocateNode();
-  if(snake_second_node) {
-      snake_second_node->x_pos = STARTPOS_X - 2;
-      snake_second_node->y_pos = STARTPOS_Y;
-      snake_second_node->prev_node = snake_first_node;
-      snake_second_node->next_node = NULL;
-      snake_second_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
-      snake_second_node->dir_to_next_node = LEFT;
+  if (snake_second_node) {
+    snake_second_node->x_pos = STARTPOS_X - 2;
+    snake_second_node->y_pos = STARTPOS_Y;
+    snake_second_node->prev_node = snake_first_node;
+    snake_second_node->next_node = NULL;
+    snake_second_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+    snake_second_node->dir_to_next_node = LEFT;
   };
 
   snake_first_node->next_node = snake_second_node;
 
   snake_node_t *snake_tail = allocateNode();
-  if(snake_tail){
-      snake_tail->x_pos = STARTPOS_X - 3;
-      snake_tail->y_pos = STARTPOS_Y;
-      snake_tail->prev_node = snake_second_node;
-      snake_tail->next_node = NULL;
-      snake_tail->tile_to_render = SNAKE_TAIL_RIGHT;
+  if (snake_tail) {
+    snake_tail->x_pos = STARTPOS_X - 3;
+    snake_tail->y_pos = STARTPOS_Y;
+    snake_tail->prev_node = snake_second_node;
+    snake_tail->next_node = NULL;
+    snake_tail->tile_to_render = SNAKE_TAIL_RIGHT;
   };
 
   snake_second_node->next_node = snake_tail;
@@ -119,6 +138,23 @@ void main(void) {
                     node_to_render->tile_to_render);
     node_to_render = node_to_render->next_node;
   }
+
+  /*  randomly place food on a free spot */
+
+  uint8_t rand_x, rand_y;
+  do{
+#if 0
+    rand_x = DIV_REG % PLAYFIELD_X_MAX;
+    rand_y = DIV_REG % PLAYFIELD_Y_MAX;
+#else
+    rand_x = rand() % PLAYFIELD_X_MAX;
+    rand_y = rand() % PLAYFIELD_Y_MAX;
+
+#endif
+  }
+  while(checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(rand_x), PLAYFIELD_TO_GLOBAL_Y_POS(rand_y)));
+
+  move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(rand_x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(rand_y));
 
   /*  Flag to check if a movement is pending to get rendered before catching a
    * new one */
@@ -244,7 +280,7 @@ void main(void) {
       if (snake.head->x_pos > PLAYFIELD_WIDTH) {
         snake.head->x_pos = 1;
       } else if (snake.head->x_pos < 1) {
-        snake.head->x_pos =  PLAYFIELD_WIDTH;
+        snake.head->x_pos = PLAYFIELD_WIDTH;
       } else if (snake.head->y_pos < PLAYFIELD_Y_OFFSET) {
         snake.head->y_pos = PLAYFIELD_HEIGHT;
       } else if (snake.head->y_pos > PLAYFIELD_HEIGHT) {
@@ -253,12 +289,14 @@ void main(void) {
 
       /*  Update tail and remove node before tail */
 
-      set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos, BACKGROUND_EMPTY_TILE);
+      set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
+                      BACKGROUND_EMPTY_TILE);
       snake_node_t *second_last_node = snake.tail->prev_node;
       snake.tail->x_pos = second_last_node->x_pos;
       snake.tail->y_pos = second_last_node->y_pos;
 
-      direction_type new_tail_direction = OPPOSITE_DIRECTION(second_last_node->prev_node->dir_to_next_node);
+      direction_type new_tail_direction =
+          OPPOSITE_DIRECTION(second_last_node->prev_node->dir_to_next_node);
       snake.tail->tile_to_render = SNAKE_TAIL_UP + new_tail_direction;
 
       second_last_node->prev_node->next_node = snake.tail;
@@ -281,7 +319,8 @@ void main(void) {
       snake_node_t *node_after_head = snake.head->next_node;
       set_bkg_tile_xy(node_after_head->x_pos, node_after_head->y_pos,
                       node_after_head->tile_to_render);
-      set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos, snake.tail->tile_to_render);
+      set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
+                      snake.tail->tile_to_render);
     }
     update_screen_counter++;
 
