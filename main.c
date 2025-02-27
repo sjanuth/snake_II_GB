@@ -33,7 +33,6 @@
  * memory. Thus, we use a memory pool for nodes */
 snake_node_t node_pool[MAX_NODES];
 
-uint16_t score = 0;
 
 pos_t get_random_free_food_position(snake_t *snake){
 
@@ -63,6 +62,7 @@ void main(void) {
   direction_type snake_direction = RIGHT;
   direction_type dpad_direction = RIGHT;
 
+  uint16_t score = 0;
   uint8_t velocity = 2;
   uint8_t has_food_in_mouth = 0;
   pos_t food_pos;
@@ -340,10 +340,32 @@ void main(void) {
         snake.head->y_pos = PLAYFIELD_Y_OFFSET;
       }
 
+      /*  Update tail and remove node before tail */
+      
+      if(!has_food_in_mouth){
+        set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
+                        BACKGROUND_EMPTY_TILE);
+        snake_node_t *second_last_node = snake.tail->prev_node;
+        snake.tail->x_pos = second_last_node->x_pos;
+        snake.tail->y_pos = second_last_node->y_pos;
+
+        direction_type new_tail_direction =
+            OPPOSITE_DIRECTION(second_last_node->prev_node->dir_to_next_node);
+        snake.tail->tile_to_render = SNAKE_TAIL_UP + new_tail_direction;
+
+        second_last_node->prev_node->next_node = snake.tail;
+        snake.tail->prev_node = second_last_node->prev_node;
+
+        second_last_node->prev_node = NULL;
+        second_last_node->next_node = NULL;
+        freeNode(second_last_node);
+      }
+
       /*  Check if food is eaten */
 
       if (checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y))){
         has_food_in_mouth = 1;
+        score += velocity;
 
         pos_t rand_pos;
         rand_pos = get_random_free_food_position(&snake);
@@ -355,25 +377,6 @@ void main(void) {
       }else{
         has_food_in_mouth = 0;
       }
-
-      /*  Update tail and remove node before tail */
-
-      set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
-                      BACKGROUND_EMPTY_TILE);
-      snake_node_t *second_last_node = snake.tail->prev_node;
-      snake.tail->x_pos = second_last_node->x_pos;
-      snake.tail->y_pos = second_last_node->y_pos;
-
-      direction_type new_tail_direction =
-          OPPOSITE_DIRECTION(second_last_node->prev_node->dir_to_next_node);
-      snake.tail->tile_to_render = SNAKE_TAIL_UP + new_tail_direction;
-
-      second_last_node->prev_node->next_node = snake.tail;
-      snake.tail->prev_node = second_last_node->prev_node;
-
-      second_last_node->prev_node = NULL;
-      second_last_node->next_node = NULL;
-      freeNode(second_last_node);
 
       /*  Toggle the flag and indicate that we have rendered the tile and can
        * process a new direction */
