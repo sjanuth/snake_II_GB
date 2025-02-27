@@ -41,6 +41,9 @@ void main(void) {
   direction_type snake_direction = RIGHT;
   direction_type dpad_direction = RIGHT;
 
+  int8_t velocity = 2;
+  pos_t food_pos;
+
   DISPLAY_ON;
   SHOW_BKG;
   SHOW_SPRITES;
@@ -73,9 +76,6 @@ void main(void) {
 
   set_sprite_data(FOOD_SPRITE, 1, food);
   set_sprite_prop(FOOD_SPRITE, 0);
-
-
-  int8_t velocity = 2;
 
   /*  Instantiate our snake object and create nodes */
 
@@ -143,7 +143,11 @@ void main(void) {
 
   uint8_t rand_x, rand_y;
   do{
+    /* TODO: This will become an issue when the snake grows longer.
+     * It might take too much time to randomly find a free spot and cause lag.
+     * Better implement a list with all free positions (numerated from 0 to max_size of all availble fields and draw a single random number */
 #if 0
+    /*  This will be faster but more deterministic */
     rand_x = DIV_REG % PLAYFIELD_X_MAX;
     rand_y = DIV_REG % PLAYFIELD_Y_MAX;
 #else
@@ -153,6 +157,9 @@ void main(void) {
 #endif
   }
   while(checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(rand_x), PLAYFIELD_TO_GLOBAL_Y_POS(rand_y)));
+
+  food_pos.x = rand_x;
+  food_pos.y = rand_y;
 
   move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(rand_x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(rand_y));
 
@@ -313,9 +320,48 @@ void main(void) {
         movement_pending = 0;
       }
 
+      /* Check if the next field in moving direction is food. 
+       * If so, then render the snake with the mouth open */
+
+      //TODO: what if the food is on the other side of the border?
+      // still render the normal tile or mouth open tile?
+      // Keep it simple for now and just render mouth open if not wrapped around
+
+      uint8_t food_lies_ahead = 0;
+      switch (snake_direction) {
+        case UP:
+          if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){break;};
+          if(snake_head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){
+            food_lies_ahead = 1;
+          }
+          break;
+        case RIGHT:
+          if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){break;};
+          if(snake_head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){
+            food_lies_ahead = 1;
+          }
+          break;
+        case DOWN:
+          if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){break;};
+          if(snake_head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){
+            food_lies_ahead = 1;
+          }
+          break;
+        case LEFT:
+          if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){break;};
+          if(snake_head->x_pos - 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){
+            food_lies_ahead = 1;
+          }
+      }
+
+      
       /*  Update background tiles */
 
-      set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_direction);
+      if(food_lies_ahead){
+        set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_direction + SNAKE_MOUTH_OPEN_UP);
+      }else{
+        set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_direction);
+      }
       snake_node_t *node_after_head = snake.head->next_node;
       set_bkg_tile_xy(node_after_head->x_pos, node_after_head->y_pos,
                       node_after_head->tile_to_render);
