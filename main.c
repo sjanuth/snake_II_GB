@@ -67,7 +67,7 @@ void main(void) {
   initrand(DIV_REG); /* Seed with the Game Boy's divider register */
 
   /*  reload background tiles for main game */
-  set_bkg_data(0, 28, snake_bckg_tileset);
+  set_bkg_data(0, 32, snake_bckg_tileset);
   /*  main game background with borders */
   set_bkg_tiles(0, 0, 20, 18, snake_bckg);
 
