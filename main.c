@@ -35,13 +35,36 @@ snake_node_t node_pool[MAX_NODES];
 
 uint16_t score = 0;
 
+pos_t get_random_free_food_position(snake_t *snake){
+
+  pos_t random_pos;
+  do{
+    /* TODO: This will become an issue when the snake grows longer.
+     * It might take too much time to randomly find a free spot and cause lag.
+     * Better implement a list with all free positions (numerated from 0 to max_size of all availble fields and draw a single random number */
+#if 0
+    /*  This will be faster but more deterministic */
+    random_pos.x = DIV_REG % PLAYFIELD_X_MAX;
+    random_pos.y = DIV_REG % PLAYFIELD_Y_MAX;
+#else
+    random_pos.x = rand() % PLAYFIELD_X_MAX;
+    random_pos.y= rand() % PLAYFIELD_Y_MAX;
+
+#endif
+  }
+  while(checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(random_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(random_pos.y)));
+
+  return random_pos;
+}
+
 void main(void) {
 
   uint8_t joypadCurrent = 0, joypadPrevious = 0;
   direction_type snake_direction = RIGHT;
   direction_type dpad_direction = RIGHT;
 
-  int8_t velocity = 2;
+  uint8_t velocity = 2;
+  uint8_t has_food_in_mouth = 0;
   pos_t food_pos;
 
   DISPLAY_ON;
@@ -141,27 +164,13 @@ void main(void) {
 
   /*  randomly place food on a free spot */
 
-  uint8_t rand_x, rand_y;
-  do{
-    /* TODO: This will become an issue when the snake grows longer.
-     * It might take too much time to randomly find a free spot and cause lag.
-     * Better implement a list with all free positions (numerated from 0 to max_size of all availble fields and draw a single random number */
-#if 0
-    /*  This will be faster but more deterministic */
-    rand_x = DIV_REG % PLAYFIELD_X_MAX;
-    rand_y = DIV_REG % PLAYFIELD_Y_MAX;
-#else
-    rand_x = rand() % PLAYFIELD_X_MAX;
-    rand_y = rand() % PLAYFIELD_Y_MAX;
+  pos_t rand_pos;
+  rand_pos = get_random_free_food_position(&snake);
 
-#endif
-  }
-  while(checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(rand_x), PLAYFIELD_TO_GLOBAL_Y_POS(rand_y)));
+  food_pos.x = rand_pos.x;
+  food_pos.y = rand_pos.y;
 
-  food_pos.x = rand_x;
-  food_pos.y = rand_y;
-
-  move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(rand_x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(rand_y));
+  move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
 
   /*  Flag to check if a movement is pending to get rendered before catching a
    * new one */
@@ -227,37 +236,74 @@ void main(void) {
 
       direction_type opposite_dir = OPPOSITE_DIRECTION(snake_direction);
       snake.head->dir_to_next_node = opposite_dir;
+      if(has_food_in_mouth){
+        /*  TODO: up, down, left and right don't share the same tile */
+        if (snake_direction == UP && dir_n == DOWN) {
+          new_node->tile_to_render = SNAKE_BODY_FOOD_EATEN;
+        } else if (snake_direction == RIGHT && dir_n == DOWN) {
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_RIGHT_DOWN;
+        } else if (snake_direction == LEFT && dir_n == DOWN) {
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_DOWN_LEFT;
+        }
 
-      if (snake_direction == UP && dir_n == DOWN) {
-        new_node->tile_to_render = SNAKE_BODY_UP_DOWN;
-      } else if (snake_direction == RIGHT && dir_n == DOWN) {
-        new_node->tile_to_render = SNAKE_BODY_RIGHT_DOWN;
-      } else if (snake_direction == LEFT && dir_n == DOWN) {
-        new_node->tile_to_render = SNAKE_BODY_DOWN_LEFT;
+        else if (snake_direction == UP && dir_n == RIGHT) {
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_UP_RIGTH;
+        } else if (snake_direction == LEFT && dir_n == RIGHT) {
+          new_node->tile_to_render = SNAKE_BODY_FOOD_EATEN;
+        } else if (snake_direction == DOWN && dir_n == RIGHT) {
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_RIGHT_DOWN;
+        }
+
+        else if (snake_direction == UP && dir_n == LEFT) {
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_LEFT_UP;
+        } else if (snake_direction == RIGHT && dir_n == LEFT) {
+          new_node->tile_to_render = SNAKE_BODY_FOOD_EATEN;
+        } else if (snake_direction == DOWN && dir_n == LEFT) {
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_DOWN_LEFT;
+        }
+
+        else if (snake_direction == LEFT && dir_n == UP) {
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_LEFT_UP;
+        } else if (snake_direction == RIGHT && dir_n == UP) {
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_UP_RIGTH;
+        } else if (snake_direction == DOWN && dir_n == UP) {
+          new_node->tile_to_render = SNAKE_BODY_FOOD_EATEN;
+        }
       }
 
-      else if (snake_direction == UP && dir_n == RIGHT) {
-        new_node->tile_to_render = SNAKE_BODY_UP_RIGHT;
-      } else if (snake_direction == LEFT && dir_n == RIGHT) {
-        new_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
-      } else if (snake_direction == DOWN && dir_n == RIGHT) {
-        new_node->tile_to_render = SNAKE_BODY_RIGHT_DOWN;
-      }
+      else{
+        /* normal without food eaten */
+        if (snake_direction == UP && dir_n == DOWN) {
+          new_node->tile_to_render = SNAKE_BODY_UP_DOWN;
+        } else if (snake_direction == RIGHT && dir_n == DOWN) {
+          new_node->tile_to_render = SNAKE_BODY_RIGHT_DOWN;
+        } else if (snake_direction == LEFT && dir_n == DOWN) {
+          new_node->tile_to_render = SNAKE_BODY_DOWN_LEFT;
+        }
 
-      else if (snake_direction == UP && dir_n == LEFT) {
-        new_node->tile_to_render = SNAKE_BODY_LEFT_UP;
-      } else if (snake_direction == RIGHT && dir_n == LEFT) {
-        new_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
-      } else if (snake_direction == DOWN && dir_n == LEFT) {
-        new_node->tile_to_render = SNAKE_BODY_DOWN_LEFT;
-      }
+        else if (snake_direction == UP && dir_n == RIGHT) {
+          new_node->tile_to_render = SNAKE_BODY_UP_RIGHT;
+        } else if (snake_direction == LEFT && dir_n == RIGHT) {
+          new_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+        } else if (snake_direction == DOWN && dir_n == RIGHT) {
+          new_node->tile_to_render = SNAKE_BODY_RIGHT_DOWN;
+        }
 
-      else if (snake_direction == LEFT && dir_n == UP) {
-        new_node->tile_to_render = SNAKE_BODY_LEFT_UP;
-      } else if (snake_direction == RIGHT && dir_n == UP) {
-        new_node->tile_to_render = SNAKE_BODY_UP_RIGHT;
-      } else if (snake_direction == DOWN && dir_n == UP) {
-        new_node->tile_to_render = SNAKE_BODY_UP_DOWN;
+        else if (snake_direction == UP && dir_n == LEFT) {
+          new_node->tile_to_render = SNAKE_BODY_LEFT_UP;
+        } else if (snake_direction == RIGHT && dir_n == LEFT) {
+          new_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+        } else if (snake_direction == DOWN && dir_n == LEFT) {
+          new_node->tile_to_render = SNAKE_BODY_DOWN_LEFT;
+        }
+
+        else if (snake_direction == LEFT && dir_n == UP) {
+          new_node->tile_to_render = SNAKE_BODY_LEFT_UP;
+        } else if (snake_direction == RIGHT && dir_n == UP) {
+          new_node->tile_to_render = SNAKE_BODY_UP_RIGHT;
+        } else if (snake_direction == DOWN && dir_n == UP) {
+          new_node->tile_to_render = SNAKE_BODY_UP_DOWN;
+        }
       }
 
       /* inject new node */
@@ -292,6 +338,22 @@ void main(void) {
         snake.head->y_pos = PLAYFIELD_HEIGHT;
       } else if (snake.head->y_pos > PLAYFIELD_HEIGHT) {
         snake.head->y_pos = PLAYFIELD_Y_OFFSET;
+      }
+
+      /*  Check if food is eaten */
+
+      if (checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y))){
+        has_food_in_mouth = 1;
+
+        pos_t rand_pos;
+        rand_pos = get_random_free_food_position(&snake);
+
+        food_pos.x = rand_pos.x;
+        food_pos.y = rand_pos.y;
+
+        move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
+      }else{
+        has_food_in_mouth = 0;
       }
 
       /*  Update tail and remove node before tail */
