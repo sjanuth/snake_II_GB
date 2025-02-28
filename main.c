@@ -59,8 +59,9 @@ pos_t get_random_free_food_position(snake_t *snake){
 void main(void) {
 
   uint8_t joypadCurrent = 0, joypadPrevious = 0;
-  direction_type snake_direction = RIGHT;
-  direction_type dpad_direction = RIGHT;
+
+  direction_type snake_direction;
+  direction_type dpad_direction;
 
   uint16_t score = 0;
   uint8_t velocity = 2;
@@ -94,13 +95,23 @@ void main(void) {
 
   /*  reload background tiles for main game */
   set_bkg_data(0, 32, snake_bckg_tileset);
-  /*  main game background with borders */
-  set_bkg_tiles(0, 0, 20, 18, snake_bckg);
 
   set_sprite_data(FOOD_SPRITE, 1, food);
   set_sprite_prop(FOOD_SPRITE, 0);
 
-  /*  Instantiate our snake object and create nodes */
+GameStart:
+
+  /*  main game background with borders */
+  set_bkg_tiles(0, 0, 20, 18, snake_bckg);
+
+  score = 0;
+  snake_direction = RIGHT;
+  dpad_direction = RIGHT;
+
+  uint16_t i;
+  for(i = 0; i < MAX_NODES; i++){
+    freeNode(&node_pool[i]);
+  }
 
   snake_node_t *snake_head = allocateNode();
   if (snake_head) {
@@ -313,32 +324,52 @@ void main(void) {
 
       /* update coordinates for the head */
 
+      pos_t anticipated_next_pos = {
+        .x = snake.head->x_pos,
+        .y = snake.head->y_pos,
+      };
+
       switch (snake_direction) {
       case UP:
-        snake.head->y_pos -= 1;
+        anticipated_next_pos.y = snake.head->y_pos - 1;
         break;
       case LEFT:
-        snake.head->x_pos -= 1;
+        anticipated_next_pos.x = snake.head->x_pos - 1;
         break;
       case DOWN:
-        snake.head->y_pos += 1;
+        anticipated_next_pos.y = snake.head->y_pos + 1;
         break;
       case RIGHT:
-        snake.head->x_pos += 1;
+        anticipated_next_pos.x = snake.head->x_pos + 1;
         break;
       }
+       
+      /* Check if next position touches the borders  */
 
-      /* Check if snake has touched the borders  */
-
-      if (snake.head->x_pos > PLAYFIELD_WIDTH) {
-        snake.head->x_pos = 1;
-      } else if (snake.head->x_pos < 1) {
-        snake.head->x_pos = PLAYFIELD_WIDTH;
-      } else if (snake.head->y_pos < PLAYFIELD_Y_OFFSET) {
-        snake.head->y_pos = PLAYFIELD_HEIGHT;
-      } else if (snake.head->y_pos > PLAYFIELD_HEIGHT) {
-        snake.head->y_pos = PLAYFIELD_Y_OFFSET;
+      if (anticipated_next_pos.x > PLAYFIELD_WIDTH) {
+         anticipated_next_pos.x = 1;
+      } else if (anticipated_next_pos.x < 1) {
+         anticipated_next_pos.x = PLAYFIELD_WIDTH;
+      } else if (anticipated_next_pos.y < PLAYFIELD_Y_OFFSET) {
+        anticipated_next_pos.y = PLAYFIELD_HEIGHT;
+      } else if (anticipated_next_pos.y > PLAYFIELD_HEIGHT) {
+        anticipated_next_pos.y = PLAYFIELD_Y_OFFSET;
       }
+
+      /*  Check if snake will bite itself */
+
+      if(checkPointForCollision(&snake, anticipated_next_pos.x, anticipated_next_pos.y)){
+
+        /*  Edge case: if the snake will bite in the tail, the game will continue */
+
+        /*  TODO: this somehow fails when snake has eaten one food. then it will render the head under the tail */
+        if(!(snake.tail->x_pos == anticipated_next_pos.x) && !(snake.tail->y_pos == anticipated_next_pos.y)){
+          goto GameStart;
+        }
+      }
+
+      snake.head->y_pos = anticipated_next_pos.y;
+      snake.head->x_pos = anticipated_next_pos.x;
 
       /*  Update tail and remove node before tail */
       
@@ -418,7 +449,6 @@ void main(void) {
             food_lies_ahead = 1;
           }
       }
-
       
       /*  Update background tiles */
 
