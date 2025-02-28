@@ -362,8 +362,7 @@ GameStart:
 
         /*  Edge case: if the snake will bite in the tail, the game will continue */
 
-        /*  TODO: this somehow fails when snake has eaten one food. then it will render the head under the tail */
-        if(!(snake.tail->x_pos == anticipated_next_pos.x) && !(snake.tail->y_pos == anticipated_next_pos.y)){
+        if(!((snake.tail->x_pos == anticipated_next_pos.x) && (snake.tail->y_pos == anticipated_next_pos.y))){
           goto GameStart;
         }
       }
