@@ -32,6 +32,7 @@
 #define STARTPOS_Y ((144 / 8) / 2)
 #define FOOD_SPRITE 0
 
+uint8_t joypadCurrent = 0, joypadPrevious = 0;
 
 /*  Since the GB has very limited RAM, using heap will lead to fragmented
  * memory. Thus, we use a memory pool for nodes */
@@ -101,13 +102,21 @@ void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
 void render_score(uint16_t *score){
   char str_score[5];
   int_to_str_padded(str_score, score, 4);
-  //sprintf(str_score, "%d", *score);
   vwf_draw_text(0, 0, 50, (unsigned char *) str_score);
+}
+
+void wait_until_pressed_debounced(uint8_t mask){
+  joypadPrevious = joypadCurrent;
+  joypadCurrent = joypad();
+  while (!(joypadCurrent & mask ) || (joypadPrevious & mask)) {
+    vsync();
+    joypadPrevious = joypadCurrent;
+    joypadCurrent = joypad();
+  }
 }
 
 void main(void) {
 
-  uint8_t joypadCurrent = 0, joypadPrevious = 0;
 
   direction_type snake_direction;
   direction_type dpad_direction;
@@ -133,9 +142,7 @@ void main(void) {
   /*  wait on splash screen until start button is pressed */
 
 #if 1
-  while (!(joypad() & (J_START | J_A | J_B))) {
-    vsync();
-  }
+  wait_until_pressed_debounced(J_START | J_A | J_B);
 #else
   delay(1000);
 #endif
@@ -257,6 +264,24 @@ GameStart:
     joypadPrevious = joypadCurrent;
     joypadCurrent = joypad();
 
+    if ((joypadCurrent & J_START) && !(joypadPrevious & J_START)){
+
+      /*  Take a snapshot of the current background */
+      uint8_t background_data_snake[20*18];
+      wait_vbl_done();  // Wait for VBlank before reading
+      get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
+
+      /*  Just show Borders without score or snake */
+      set_bkg_tiles(0, 0, 20, 18, snake_bckg);
+      vwf_draw_text(STARTPOS_X - 2, STARTPOS_Y, 60, "PAUSED");
+      render_score(&score);
+      vsync();
+
+      wait_until_pressed_debounced(J_START);
+      set_bkg_tiles(0, 0, 20, 18, background_data_snake);
+      vsync();
+      delay(400);
+    }
 
     if (joypadCurrent & J_UP) {
       dpad_direction = UP;
@@ -418,9 +443,9 @@ GameStart:
         if(!((snake.tail->x_pos == anticipated_next_pos.x) && (snake.tail->y_pos == anticipated_next_pos.y))){
 #define flash_interval (200) /* TODO: measure actual interval */
 
-          uint8_t background_data_snake[20*15];
+          uint8_t background_data_snake[20*18];
           wait_vbl_done();  // Wait for VBlank before reading
-          get_bkg_tiles(0, 3, 20, 15, &background_data_snake[0]);
+          get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
           uint8_t i;
           for(i = 0; i < 5; i++){
             /*  Clear snake from screen, just show borders */
@@ -429,7 +454,7 @@ GameStart:
             delay(flash_interval);
 
             /* show snake on background */
-            set_bkg_tiles(0, 3, 20, 15, background_data_snake);
+            set_bkg_tiles(0, 0, 20, 18, background_data_snake);
             vsync();
             delay(flash_interval);
 
@@ -437,9 +462,7 @@ GameStart:
 
           /*  TODO: If a new high score was reached, display a notification */
 
-          while (!(joypad() & (J_START | J_A ))) {
-            vsync();
-          }
+          wait_until_pressed_debounced(J_START | J_A );
 
           goto GameStart;
         }
