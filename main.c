@@ -22,7 +22,6 @@
 #define PLAYFIELD_TO_GLOBAL_Y_POS(Y) (Y + PLAYFIELD_Y_OFFSET) /* borders + 2 for score */
 #define PLAYFIELD_X_MAX (17)
 #define PLAYFIELD_Y_MAX (12)
-#define BACKGROUND_EMPTY_TILE 11
 #define GBP_FPS 60
 #define STARTPOS_X ((160 / 8) / 2)
 #define STARTPOS_Y ((144 / 8) / 2)
@@ -94,7 +93,7 @@ void main(void) {
   initrand(DIV_REG); /* Seed with the Game Boy's divider register */
 
   /*  reload background tiles for main game */
-  set_bkg_data(0, 32, snake_bckg_tileset);
+  set_bkg_data(0, 36, snake_bckg_tileset);
 
   set_sprite_data(FOOD_SPRITE, 1, food);
   set_sprite_prop(FOOD_SPRITE, 0);
@@ -129,7 +128,7 @@ GameStart:
     snake_first_node->y_pos = STARTPOS_Y;
     snake_first_node->prev_node = snake_head;
     snake_first_node->next_node = NULL;
-    snake_first_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+    snake_first_node->tile_to_render = SNAKE_BODY_STRAIGHT_RIGHT;
     snake_first_node->dir_to_next_node = LEFT;
   };
 
@@ -141,7 +140,7 @@ GameStart:
     snake_second_node->y_pos = STARTPOS_Y;
     snake_second_node->prev_node = snake_first_node;
     snake_second_node->next_node = NULL;
-    snake_second_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+    snake_second_node->tile_to_render = SNAKE_BODY_STRAIGHT_RIGHT;
     snake_second_node->dir_to_next_node = LEFT;
   };
 
@@ -250,7 +249,7 @@ GameStart:
       if(has_food_in_mouth){
         /*  TODO: up, down, left and right don't share the same tile */
         if (snake_direction == UP && dir_n == DOWN) {
-          new_node->tile_to_render = SNAKE_BODY_FOOD_EATEN;
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_UP;
         } else if (snake_direction == RIGHT && dir_n == DOWN) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_RIGHT_DOWN;
         } else if (snake_direction == LEFT && dir_n == DOWN) {
@@ -260,7 +259,7 @@ GameStart:
         else if (snake_direction == UP && dir_n == RIGHT) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_UP_RIGTH;
         } else if (snake_direction == LEFT && dir_n == RIGHT) {
-          new_node->tile_to_render = SNAKE_BODY_FOOD_EATEN;
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_LEFT;
         } else if (snake_direction == DOWN && dir_n == RIGHT) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_RIGHT_DOWN;
         }
@@ -268,7 +267,7 @@ GameStart:
         else if (snake_direction == UP && dir_n == LEFT) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_LEFT_UP;
         } else if (snake_direction == RIGHT && dir_n == LEFT) {
-          new_node->tile_to_render = SNAKE_BODY_FOOD_EATEN;
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_RIGHT;
         } else if (snake_direction == DOWN && dir_n == LEFT) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_DOWN_LEFT;
         }
@@ -278,14 +277,14 @@ GameStart:
         } else if (snake_direction == RIGHT && dir_n == UP) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_UP_RIGTH;
         } else if (snake_direction == DOWN && dir_n == UP) {
-          new_node->tile_to_render = SNAKE_BODY_FOOD_EATEN;
+          new_node->tile_to_render = SNAKE_FOOD_EATEN_DOWN;
         }
       }
 
       else{
         /* normal without food eaten */
         if (snake_direction == UP && dir_n == DOWN) {
-          new_node->tile_to_render = SNAKE_BODY_UP_DOWN;
+          new_node->tile_to_render = SNAKE_BODY_STRAIGHT_UP;
         } else if (snake_direction == RIGHT && dir_n == DOWN) {
           new_node->tile_to_render = SNAKE_BODY_RIGHT_DOWN;
         } else if (snake_direction == LEFT && dir_n == DOWN) {
@@ -295,7 +294,7 @@ GameStart:
         else if (snake_direction == UP && dir_n == RIGHT) {
           new_node->tile_to_render = SNAKE_BODY_UP_RIGHT;
         } else if (snake_direction == LEFT && dir_n == RIGHT) {
-          new_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+          new_node->tile_to_render = SNAKE_BODY_STRAIGHT_LEFT;
         } else if (snake_direction == DOWN && dir_n == RIGHT) {
           new_node->tile_to_render = SNAKE_BODY_RIGHT_DOWN;
         }
@@ -303,7 +302,7 @@ GameStart:
         else if (snake_direction == UP && dir_n == LEFT) {
           new_node->tile_to_render = SNAKE_BODY_LEFT_UP;
         } else if (snake_direction == RIGHT && dir_n == LEFT) {
-          new_node->tile_to_render = SNAKE_BODY_LEFT_RIGHT;
+          new_node->tile_to_render = SNAKE_BODY_STRAIGHT_RIGHT;
         } else if (snake_direction == DOWN && dir_n == LEFT) {
           new_node->tile_to_render = SNAKE_BODY_DOWN_LEFT;
         }
@@ -313,7 +312,7 @@ GameStart:
         } else if (snake_direction == RIGHT && dir_n == UP) {
           new_node->tile_to_render = SNAKE_BODY_UP_RIGHT;
         } else if (snake_direction == DOWN && dir_n == UP) {
-          new_node->tile_to_render = SNAKE_BODY_UP_DOWN;
+          new_node->tile_to_render = SNAKE_BODY_STRAIGHT_DOWN;
         }
       }
 
@@ -363,6 +362,9 @@ GameStart:
         /*  Edge case: if the snake will bite in the tail, the game will continue */
 
         if(!((snake.tail->x_pos == anticipated_next_pos.x) && (snake.tail->y_pos == anticipated_next_pos.y))){
+          /*  TODO: quick flash snake 5 times(?) (interval?) and then wait until button press.
+           *  If a new high score was reached, display a notification
+           *  Ohterwise, restart*/
           goto GameStart;
         }
       }
