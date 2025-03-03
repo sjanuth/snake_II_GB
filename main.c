@@ -36,6 +36,14 @@ snake_node_t node_pool[MAX_NODES];
 pos_t get_random_free_food_position(snake_t *snake){
 
   pos_t random_pos;
+
+#if 0
+  /*  for testing */
+  random_pos.x = 0;
+  random_pos.y = PLAYFIELD_Y_MAX ;
+  return random_pos;
+#endif
+
   do{
     /* TODO: This will become an issue when the snake grows longer.
      * It might take too much time to randomly find a free spot and cause lag.
@@ -335,7 +343,7 @@ GameStart:
         break;
       }
 
-      /* Check if next position touches the borders  */
+      /* Check if next position touches the borders and a wrap around occurs */
 
       if (anticipated_next_pos.x > PLAYFIELD_WIDTH) {
          anticipated_next_pos.x = 1;
@@ -436,10 +444,6 @@ GameStart:
       /* Check if the next field in moving direction is food.
        * If so, then render the snake with the mouth open */
 
-      //TODO: what if the food is on the other side of the border?
-      // still render the normal tile or mouth open tile?
-      // Keep it simple for now and just render mouth open if not wrapped around
-
       uint8_t food_lies_ahead = 0;
       switch (snake_direction) {
         case UP:
@@ -447,11 +451,23 @@ GameStart:
           if(snake_head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){
             food_lies_ahead = 1;
           }
-          break;
+          /* Check wrapped around position */
+          else if(PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_HEIGHT){
+             if(snake_head->y_pos - 1 < PLAYFIELD_Y_OFFSET ){
+               food_lies_ahead = 1;
+             }
+          }
+         break;
         case RIGHT:
           if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){break;};
           if(snake_head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){
             food_lies_ahead = 1;
+          }
+          /* Check wrapped around position */
+          else if(PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == 1){
+              if(snake_head->x_pos + 1 > PLAYFIELD_WIDTH ){
+                food_lies_ahead = 1;
+              }
           }
           break;
         case DOWN:
@@ -459,14 +475,27 @@ GameStart:
           if(snake_head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){
             food_lies_ahead = 1;
           }
+          /* Check wrapped around position */
+          else if(PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_Y_OFFSET){
+              if(snake_head->y_pos + 1 > PLAYFIELD_HEIGHT ){
+                food_lies_ahead = 1;
+              }
+          }
           break;
         case LEFT:
           if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){break;};
           if(snake_head->x_pos - 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){
             food_lies_ahead = 1;
           }
+          /* Check wrapped around position */
+          else if(PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == PLAYFIELD_WIDTH){
+              if(snake_head->x_pos -1 < 1 ){
+                food_lies_ahead = 1;
+              }
+          }
+
       }
-      
+
       /*  Update background tiles */
 
       if(food_lies_ahead){
