@@ -4,10 +4,10 @@
 
 extern snake_node_t node_pool[MAX_NODES];
 
-/*
+/**
  * Allocate a node from the pool (aka malloc())
  *
- * @returns: Pointer to the availble node. NULL if no node is availble
+ * @return Pointer to the availble node. NULL if no node is availble
  */
 snake_node_t *allocateNode(void) {
   uint16_t i;
@@ -20,23 +20,23 @@ snake_node_t *allocateNode(void) {
   return NULL;
 }
 
-/*
+/**
  * Frees up a node fom the pool (aka free())
  *
- * @param obj: the object to free up
+ * @param obj The object to free up
  */
 void freeNode(snake_node_t* obj) {
     obj->active = 0;
 }
 
-/*
+/**
  * Check if a point (snake head or food) collides with the snake
  *
  * @param snake: the linked list with all snake nodes.
  * @param x: x position in global coordination (map) system.
  * @param y: y position in global coordination (map) system.
  *
- * @returns: 1 if there was a collision, otherwise 0.
+ * @return 1 if there was a collision, otherwise 0.
  */
 uint8_t checkPointForCollision(snake_t *snake, uint8_t x, uint8_t y){
 

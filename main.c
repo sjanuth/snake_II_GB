@@ -216,13 +216,6 @@ GameStart:
 
     if (update_screen_counter % (GBP_FPS / velocity) == 0) {
 
-      /*  Before moving the snake tile in background, we must clear the current
-       * tile */
-
-      uint8_t tmp_x = snake.head->x_pos;
-      uint8_t tmp_y = snake.head->y_pos;
-
-      set_bkg_tile_xy(tmp_x, tmp_y, BACKGROUND_EMPTY_TILE);
 
       /*  Instead of moving and updating every node in the linked list,
        *  we just insert a new node after the head and remove the node before
@@ -230,8 +223,8 @@ GameStart:
 
       snake_node_t *new_node = allocateNode();
       if (new_node) {
-        new_node->x_pos = tmp_x;
-        new_node->y_pos = tmp_y;
+        new_node->x_pos = snake.head->x_pos;
+        new_node->y_pos = snake.head->y_pos;
         new_node->dir_to_next_node = snake.head->dir_to_next_node;
         new_node->tile_to_render = BACKGROUND_EMPTY_TILE;
         new_node->next_node = snake.head->next_node;
@@ -247,7 +240,6 @@ GameStart:
       direction_type opposite_dir = OPPOSITE_DIRECTION(snake_direction);
       snake.head->dir_to_next_node = opposite_dir;
       if(has_food_in_mouth){
-        /*  TODO: up, down, left and right don't share the same tile */
         if (snake_direction == UP && dir_n == DOWN) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_UP;
         } else if (snake_direction == RIGHT && dir_n == DOWN) {
@@ -342,7 +334,7 @@ GameStart:
         anticipated_next_pos.x = snake.head->x_pos + 1;
         break;
       }
-       
+
       /* Check if next position touches the borders  */
 
       if (anticipated_next_pos.x > PLAYFIELD_WIDTH) {
@@ -362,18 +354,42 @@ GameStart:
         /*  Edge case: if the snake will bite in the tail, the game will continue */
 
         if(!((snake.tail->x_pos == anticipated_next_pos.x) && (snake.tail->y_pos == anticipated_next_pos.y))){
-          /*  TODO: quick flash snake 5 times(?) (interval?) and then wait until button press.
-           *  If a new high score was reached, display a notification
-           *  Ohterwise, restart*/
+#define flash_interval (200) /* TODO: measure actual interval */
+
+          uint8_t background_data_snake[20*15];
+          wait_vbl_done();  // Wait for VBlank before reading
+          get_bkg_tiles(0, 3, 20, 15, &background_data_snake[0]);
+          uint8_t i;
+          for(i = 0; i < 5; i++){
+            /*  Clear snake from screen, just show borders */
+            set_bkg_tiles(0, 0, 20, 18, snake_bckg);
+            vsync();
+            delay(flash_interval);
+
+            /* show snake on background */
+            set_bkg_tiles(0, 3, 20, 15, background_data_snake);
+            vsync();
+            delay(flash_interval);
+
+          }
+
+          /*  TODO: If a new high score was reached, display a notification */
+
+          while (!(joypad() & (J_START | J_A ))) {
+            vsync();
+          }
+
           goto GameStart;
         }
       }
+
+      set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, BACKGROUND_EMPTY_TILE);
 
       snake.head->y_pos = anticipated_next_pos.y;
       snake.head->x_pos = anticipated_next_pos.x;
 
       /*  Update tail and remove node before tail */
-      
+
       if(!has_food_in_mouth){
         set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
                         BACKGROUND_EMPTY_TILE);
@@ -417,7 +433,7 @@ GameStart:
         movement_pending = 0;
       }
 
-      /* Check if the next field in moving direction is food. 
+      /* Check if the next field in moving direction is food.
        * If so, then render the snake with the mouth open */
 
       //TODO: what if the food is on the other side of the border?
