@@ -25,10 +25,17 @@ BINS	    = $(PROJECTNAME).gb
 SPRITESDIR  = sprites
 SPRITE_SOURCES := $(wildcard $(SPRITESDIR)/*.c)
 # Convert .c file paths into .o file paths (keeping them in sprites/)
-SPRITE_OBJ := $(SPRITE_SOURCES:.c=.o)
+#SPRITE_OBJ := $(SPRITE_SOURCES:.c=.o)
 C_ROOT_SOURCES   := $(wildcard *.c)
-CSOURCES = $(C_ROOT_SOURCES) $(SPRITE_SOURCES)
+
+FONTSDIR = vwf/src
+FONTSINCLUDE = vwf/include
+FONTS_SOURCES := $(wildcard $(FONTSDIR)/*.c)
+CSOURCES = $(C_ROOT_SOURCES) $(SPRITE_SOURCES) $(FONTS_SOURCES)
 ASMSOURCES := $(wildcard *.s)
+ASM_FONTS_SOURCES := $(wildcard $(FONTSDIR)/sm83/*.s)
+
+LCCFLAGS += -I$(FONTSINCLUDE) 
 
 all:	$(BINS) 
 
@@ -39,8 +46,8 @@ compile.bat: Makefile
 
 # Compile and link all source files in a single call to LCC
 #
-$(BINS):	$(CSOURCES) $(ASMSOURCES) 
-	$(LCC) $(LCCFLAGS) -o $@ $(CSOURCES) $(ASMSOURCES)
+$(BINS):	$(CSOURCES) $(ASMSOURCES) $(ASM_FONTS_SOURCES)
+	$(LCC) $(LCCFLAGS) -o $@ $(CSOURCES) $(ASMSOURCES) $(ASM_FONTS_SOURCES)
 	
 # Compiles sprite assets in sprites directory
 $(SPRITESDIR)/%.o:	$(SPRITESDIR)/%.c

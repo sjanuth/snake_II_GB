@@ -7,6 +7,11 @@
 #include <gb/gb.h>
 #include <stdint.h>
 #include <rand.h>
+#include <stdio.h>
+#include "vwf.h"
+#include "vwf_font.h"
+#include "vwf_font_bold.h"
+#include "vwf_font_ru.h"
 
 /* Definitions and globals variables */
 
@@ -58,9 +63,46 @@ pos_t get_random_free_food_position(snake_t *snake){
 
 #endif
   }
-  while(checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(random_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(random_pos.y)));
+  while(checkPointForCollision(
+        snake,
+        PLAYFIELD_TO_GLOBAL_X_POS(random_pos.x),
+        PLAYFIELD_TO_GLOBAL_Y_POS(random_pos.y))
+      );
 
   return random_pos;
+}
+
+/**
+ *
+ */
+void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
+    uint16_t temp = *number;
+    uint8_t digits = 0;
+
+    // Count digits in the number
+    do {
+        digits++;
+        temp /= 10;
+    } while (temp > 0);
+
+    // Calculate leading zeros needed
+    uint8_t padding = width - digits;
+    uint8_t i = 0;
+
+    // Add leading zeros
+    while (padding-- > 0) {
+        buffer[i++] = '0';
+    }
+
+    // Convert number to string
+    sprintf(buffer + i, "%d", *number);
+}
+
+void render_score(uint16_t *score){
+  char str_score[5];
+  int_to_str_padded(str_score, score, 4);
+  //sprintf(str_score, "%d", *score);
+  vwf_draw_text(0, 0, 50, (unsigned char *) str_score);
 }
 
 void main(void) {
@@ -78,7 +120,7 @@ void main(void) {
   DISPLAY_ON;
   SHOW_BKG;
   SHOW_SPRITES;
-  SPRITES_8x8;
+  SPRITES_8x16;
 
   set_bkg_data(0, splash_bg_asset_TILE_COUNT, splash_bg_asset_tiles);
 
@@ -101,10 +143,19 @@ void main(void) {
   initrand(DIV_REG); /* Seed with the Game Boy's divider register */
 
   /*  reload background tiles for main game */
-  set_bkg_data(0, 36, snake_bckg_tileset);
+  set_bkg_data(0, 39, snake_bckg_tileset);
 
   set_sprite_data(FOOD_SPRITE, 1, food);
   set_sprite_prop(FOOD_SPRITE, 0);
+
+  /*  Load fonts */
+
+  vwf_load_font(0, vwf_font, BANK(vwf_font));
+  vwf_load_font(1, vwf_font_bold, BANK(vwf_font_bold));
+  vwf_load_font(2, font_ru, BANK(font_ru));
+
+  vwf_activate_font(0);
+  vwf_set_destination(VWF_RENDER_BKG);
 
 GameStart:
 
@@ -112,6 +163,8 @@ GameStart:
   set_bkg_tiles(0, 0, 20, 18, snake_bckg);
 
   score = 0;
+  render_score(&score);
+
   snake_direction = RIGHT;
   dpad_direction = RIGHT;
 
@@ -203,6 +256,7 @@ GameStart:
 
     joypadPrevious = joypadCurrent;
     joypadCurrent = joypad();
+
 
     if (joypadCurrent & J_UP) {
       dpad_direction = UP;
@@ -422,6 +476,7 @@ GameStart:
       if (checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y))){
         has_food_in_mouth = 1;
         score += velocity;
+        render_score(&score);
 
         pos_t rand_pos;
         rand_pos = get_random_free_food_position(&snake);

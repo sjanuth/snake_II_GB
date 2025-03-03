@@ -4,6 +4,7 @@
       "/home/sja/Programming/gbdk/bin/lcc",
       "-c",
       "-I/home/sja/Programming/gbdk/include",
+      "-I/home/sja/Programming/GB_dev/snake_3310_GB/vwf/include",
       "-o",
       "Snake_3310_GB.gb",
       "main.c"
