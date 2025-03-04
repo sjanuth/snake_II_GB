@@ -102,7 +102,7 @@ void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
 void render_score(uint16_t *score){
   char str_score[5];
   int_to_str_padded(str_score, score, 4);
-  vwf_draw_text(1, 1, 50, (unsigned char *) str_score);
+  vwf_draw_text(1, 1, 60, (unsigned char *) str_score);
 }
 
 uint8_t is_button_pressed_debounced(uint8_t mask){
@@ -125,8 +125,10 @@ void main(void) {
   direction_type dpad_direction;
 
   uint16_t score;
-  uint8_t velocity = 1;
+  uint8_t velocity = 3;
   uint8_t has_food_in_mouth = 0;
+  /* Bring up an animal after 5 meals (animals don't count here) */
+  uint8_t food_counter = 0;
   pos_t food_pos;
 
   DISPLAY_ON;
@@ -153,7 +155,7 @@ void main(void) {
   initrand(DIV_REG); /* Seed with the Game Boy's divider register */
 
   /*  reload background tiles for main game */
-  set_bkg_data(0, 39, snake_bckg_tileset);
+  set_bkg_data(0, 51, snake_bckg_tileset);
 
   set_sprite_data(FOOD_SPRITE, 1, food);
   set_sprite_prop(FOOD_SPRITE, 0);
@@ -274,7 +276,7 @@ GameStart:
 
       /*  Just show Borders without score or snake */
       set_bkg_tiles(0, 0, 20, 18, snake_bckg);
-      vwf_draw_text(STARTPOS_X - 2, STARTPOS_Y, 60, "PAUSED");
+      vwf_draw_text(STARTPOS_X - 2, STARTPOS_Y, 70, "PAUSED");
       render_score(&score);
       vsync();
 
@@ -506,6 +508,13 @@ GameStart:
         has_food_in_mouth = 1;
         score += velocity;
         render_score(&score);
+
+        food_counter++;
+        if (food_counter >= 5 ){
+          /*  Time to show an animal */
+          food_counter = 0;
+          //TODO: show animal
+        }
 
         pos_t rand_pos;
         rand_pos = get_random_free_food_position(&snake);
