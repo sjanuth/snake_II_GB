@@ -104,7 +104,7 @@ void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
 void render_score(uint16_t *score){
   char str_score[5];
   int_to_str_padded(str_score, score, 4);
-  vwf_draw_text(0, 0, 50, (unsigned char *) str_score);
+  vwf_draw_text(1, 1, 50, (unsigned char *) str_score);
 }
 
 uint8_t is_button_pressed_debounced(uint8_t mask){
