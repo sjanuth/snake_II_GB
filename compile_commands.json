@@ -7,6 +7,20 @@
       "-I/home/sja/Programming/gbdk/include",
       "-o",
       "Snake_3310_GB.gb",
+      "animals_tiles.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/animals_tiles.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
       "main.c"
     ],
     "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",

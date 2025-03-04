@@ -1,7 +1,6 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
-
 #include <stdint.h>
 #define PLAYFIELD_HEIGHT ((144 / 8) - 1 - 1)
 #define PLAYFIELD_WIDTH ((160 / 8) - 1 - 1)
@@ -13,6 +12,17 @@ typedef enum {
   DOWN,
   LEFT,
 } direction_type;
+
+/*  animal sprites use two tiles to build a metasprite */
+enum {
+  FOOD_SPRITE,
+  SPIDER_SPRITE,
+  MOUSE_SPRITE = 3,
+  FISH_SPRITE = 5,
+  BUG_SPRITE = 7,
+  TURTLE_SPRITE = 9,
+  ANT_SPRITE = 11,
+};
 
 enum {
   SNAKE_HEAD_UP_TILE,
@@ -48,6 +58,9 @@ enum {
   SNAKE_FOOD_EATEN_RIGHT,
   SNAKE_FOOD_EATEN_DOWN,
   SNAKE_FOOD_EATEN_LEFT,
+};
+
+enum{
   ANIMAL_SPIDER_1,
   ANIMAL_SPIDER_2,
   ANIMAL_MOUSE_1,

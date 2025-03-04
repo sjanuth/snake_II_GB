@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include "vwf.h"
 #include "vwf_font.h"
+#include "animals.h"
+#include "animals_tiles.h"
 
 /* Definitions and globals variables */
 
@@ -28,7 +30,6 @@
 #define GBP_FPS 60
 #define STARTPOS_X ((160 / 8) / 2)
 #define STARTPOS_Y ((144 / 8) / 2)
-#define FOOD_SPRITE 0
 
 uint8_t joypadCurrent = 0, joypadPrevious = 0;
 
@@ -134,7 +135,7 @@ void main(void) {
   DISPLAY_ON;
   SHOW_BKG;
   SHOW_SPRITES;
-  SPRITES_8x16;
+  SPRITES_8x8;
 
   set_bkg_data(0, splash_bg_asset_TILE_COUNT, splash_bg_asset_tiles);
 
@@ -157,8 +158,14 @@ void main(void) {
   /*  reload background tiles for main game */
   set_bkg_data(0, 51, snake_bckg_tileset);
 
+#define TILE_SIZE (16) /*  8x8 Bits and 2 bit color */
   set_sprite_data(FOOD_SPRITE, 1, food);
-  set_sprite_prop(FOOD_SPRITE, 0);
+  set_sprite_data(SPIDER_SPRITE, 2, &animals_tiles[0]);
+  set_sprite_data(MOUSE_SPRITE , 2, &animals_tiles[ANIMAL_MOUSE_1 * TILE_SIZE]);
+  set_sprite_data(FISH_SPRITE , 2, &animals_tiles[ANIMAL_FISH_1 * TILE_SIZE]);
+  set_sprite_data(BUG_SPRITE , 2, &animals_tiles[ANIMAL_BUG_1 * TILE_SIZE]);
+  set_sprite_data(TURTLE_SPRITE, 2, &animals_tiles[ANIMAL_TURTLE_1 * TILE_SIZE]);
+  set_sprite_data(ANT_SPRITE, 2, &animals_tiles[ANIMAL_ANT_1 * TILE_SIZE]);
 
   /*  Load fonts */
 
@@ -182,6 +189,22 @@ GameStart:
   for(i = 0; i < MAX_NODES; i++){
     freeNode(&node_pool[i]);
   }
+
+#if 1
+  // quick test draw metasprite
+  move_metasprite_ex(animal_spider_metasprite,SPIDER_SPRITE,0,SPIDER_SPRITE,
+      PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(0));
+  move_metasprite_ex(animal_mouse_metasprite,MOUSE_SPRITE ,0,MOUSE_SPRITE,
+     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(1));
+  move_metasprite_ex(animal_fish_metasprite,FISH_SPRITE ,0,FISH_SPRITE,
+     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(2));
+  move_metasprite_ex(animal_bug_metasprite,BUG_SPRITE ,0, BUG_SPRITE,
+     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(3));
+  move_metasprite_ex(animal_turtle_metasprite,TURTLE_SPRITE, 0, TURTLE_SPRITE,
+     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(4));
+  move_metasprite_ex(animal_ant_metasprite,ANT_SPRITE ,0, ANT_SPRITE,
+     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(5));
+#endif
 
   snake_node_t *snake_head = allocateNode();
   if (snake_head) {
@@ -276,7 +299,7 @@ GameStart:
 
       /*  Just show Borders without score or snake */
       set_bkg_tiles(0, 0, 20, 18, snake_bckg);
-      vwf_draw_text(STARTPOS_X - 2, STARTPOS_Y, 70, "PAUSED");
+      vwf_draw_text(STARTPOS_X - 2, STARTPOS_Y, 70, "Paused");
       render_score(&score);
       vsync();
 
