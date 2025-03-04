@@ -18,7 +18,7 @@
 #define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
 /*  2 tiles for score, 1 tile for border, 1 tile for grid */
 #define PLAYFIELD_Y_OFFSET (4)
-/*  The plafield has the coordinates
+/*  The playfield has the coordinates
  *  x = [0 -17]
  *  y = [0- 12]*/
 #define PLAYFIELD_TO_SPRITE_X_POS(X) ((X*8) + 16)
@@ -74,28 +74,30 @@ pos_t get_random_free_food_position(snake_t *snake){
 }
 
 /**
+ * Because sprintf does not support padding with %0xd in GBDK,
+ * we have to do the zero padding ourselves
  *
+ * @param buffer String buffer where the result will be stored
+ * @param number Pointer to the number to be converted
+ * @param width How long the zero padded number should be 
  */
 void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
     uint16_t temp = *number;
     uint8_t digits = 0;
 
-    // Count digits in the number
+    /* Count digits in the number */
     do {
         digits++;
         temp /= 10;
     } while (temp > 0);
 
-    // Calculate leading zeros needed
     uint8_t padding = width - digits;
     uint8_t i = 0;
 
-    // Add leading zeros
     while (padding-- > 0) {
         buffer[i++] = '0';
     }
 
-    // Convert number to string
     sprintf(buffer + i, "%d", *number);
 }
 
@@ -103,6 +105,10 @@ void render_score(uint16_t *score){
   char str_score[5];
   int_to_str_padded(str_score, score, 4);
   vwf_draw_text(0, 0, 50, (unsigned char *) str_score);
+}
+
+uint8_t is_button_pressed_debounced(uint8_t mask){
+  return (joypadCurrent & mask) && !(joypadPrevious & mask);
 }
 
 void wait_until_pressed_debounced(uint8_t mask){
@@ -116,7 +122,6 @@ void wait_until_pressed_debounced(uint8_t mask){
 }
 
 void main(void) {
-
 
   direction_type snake_direction;
   direction_type dpad_direction;
@@ -283,14 +288,20 @@ GameStart:
       delay(400);
     }
 
-    if (joypadCurrent & J_UP) {
+    if (is_button_pressed_debounced(J_UP)) {
       dpad_direction = UP;
-    } else if ((joypadCurrent & J_RIGHT)) {
+    } else if (is_button_pressed_debounced(J_RIGHT)) {
       dpad_direction = RIGHT;
-    } else if ((joypadCurrent & J_DOWN)) {
+    } else if (is_button_pressed_debounced(J_DOWN)) {
       dpad_direction = DOWN;
-    } else if ((joypadCurrent & J_LEFT)) {
+    } else if (is_button_pressed_debounced(J_LEFT)) {
       dpad_direction = LEFT;
+    } else if (is_button_pressed_debounced(J_A)) {
+      /* Turn right in moving direction */
+      dpad_direction = (snake_direction + 1) % 4;
+    } else if (is_button_pressed_debounced(J_B)) {
+      /* Turn left in moving direction */
+      dpad_direction = (snake_direction + 3) % 4;
     }
 
     if (!movement_pending) {
@@ -457,7 +468,6 @@ GameStart:
             set_bkg_tiles(0, 0, 20, 18, background_data_snake);
             vsync();
             delay(flash_interval);
-
           }
 
           /*  TODO: If a new high score was reached, display a notification */

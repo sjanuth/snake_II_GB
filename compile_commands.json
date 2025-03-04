@@ -3,8 +3,8 @@
     "arguments": [
       "/home/sja/Programming/gbdk/bin/lcc",
       "-c",
+      "-Ivwf/include",
       "-I/home/sja/Programming/gbdk/include",
-      "-I/home/sja/Programming/GB_dev/snake_3310_GB/vwf/include",
       "-o",
       "Snake_3310_GB.gb",
       "main.c"
@@ -17,6 +17,49 @@
     "arguments": [
       "/home/sja/Programming/gbdk/bin/lcc",
       "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "snake_bckg.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/snake_bckg.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "snake_bckg_tileset.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/snake_bckg_tileset.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "snake.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/snake.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
       "-I/home/sja/Programming/gbdk/include",
       "-o",
       "Snake_3310_GB.gb",
@@ -24,6 +67,90 @@
     ],
     "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
     "file": "/home/sja/Programming/GB_dev/snake_3310_GB/splash_bg_asset.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "sprites/food.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/sprites/food.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "vwf/src/vwf.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/vwf/src/vwf.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "vwf/src/vwf_font_bold.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/vwf/src/vwf_font_bold.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "vwf/src/vwf_font.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/vwf/src/vwf_font.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "vwf/src/vwf_font_ru.c"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/vwf/src/vwf_font_ru.c",
+    "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
+  },
+  {
+    "arguments": [
+      "/home/sja/Programming/gbdk/bin/lcc",
+      "-c",
+      "-Ivwf/include",
+      "-I/home/sja/Programming/gbdk/include",
+      "-o",
+      "Snake_3310_GB.gb",
+      "vwf/src/sm83/vwf_a.s"
+    ],
+    "directory": "/home/sja/Programming/GB_dev/snake_3310_GB",
+    "file": "/home/sja/Programming/GB_dev/snake_3310_GB/vwf/src/sm83/vwf_a.s",
     "output": "/home/sja/Programming/GB_dev/snake_3310_GB/Snake_3310_GB.gb"
   }
 ]
