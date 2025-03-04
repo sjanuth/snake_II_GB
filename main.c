@@ -10,8 +10,6 @@
 #include <stdio.h>
 #include "vwf.h"
 #include "vwf_font.h"
-#include "vwf_font_bold.h"
-#include "vwf_font_ru.h"
 
 /* Definitions and globals variables */
 
@@ -79,7 +77,7 @@ pos_t get_random_free_food_position(snake_t *snake){
  *
  * @param buffer String buffer where the result will be stored
  * @param number Pointer to the number to be converted
- * @param width How long the zero padded number should be 
+ * @param width How long the zero padded number should be
  */
 void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
     uint16_t temp = *number;
@@ -126,8 +124,8 @@ void main(void) {
   direction_type snake_direction;
   direction_type dpad_direction;
 
-  uint16_t score = 0;
-  uint8_t velocity = 2;
+  uint16_t score;
+  uint8_t velocity = 1;
   uint8_t has_food_in_mouth = 0;
   pos_t food_pos;
 
@@ -163,8 +161,6 @@ void main(void) {
   /*  Load fonts */
 
   vwf_load_font(0, vwf_font, BANK(vwf_font));
-  vwf_load_font(1, vwf_font_bold, BANK(vwf_font_bold));
-  vwf_load_font(2, font_ru, BANK(font_ru));
 
   vwf_activate_font(0);
   vwf_set_destination(VWF_RENDER_BKG);
