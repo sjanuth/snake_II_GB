@@ -190,8 +190,9 @@ GameStart:
     freeNode(&node_pool[i]);
   }
 
-#if 1
+#if 0
   // quick test draw metasprite
+  
   move_metasprite_ex(animal_spider_metasprite,SPIDER_SPRITE,0,SPIDER_SPRITE,
       PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(0));
   move_metasprite_ex(animal_mouse_metasprite,MOUSE_SPRITE ,0,MOUSE_SPRITE,
@@ -204,6 +205,10 @@ GameStart:
      PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(4));
   move_metasprite_ex(animal_ant_metasprite,ANT_SPRITE ,0, ANT_SPRITE,
      PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(5));
+
+  move_metasprite_ex(animal_spider_metasprite,SPIDER_SPRITE,0,13,
+      160 - (2*8) - 8 - (2 * 8),16 + 8);
+
 #endif
 
   snake_node_t *snake_head = allocateNode();
@@ -473,21 +478,27 @@ GameStart:
         /*  Edge case: if the snake will bite in the tail, the game will continue */
 
         if(!((snake.tail->x_pos == anticipated_next_pos.x) && (snake.tail->y_pos == anticipated_next_pos.y))){
-#define flash_interval (200) /* TODO: measure actual interval */
+#define flash_interval ((1600/4)/2)
 
           uint8_t background_data_snake[20*18];
           wait_vbl_done();  // Wait for VBlank before reading
           get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
-          uint8_t i;
-          for(i = 0; i < 5; i++){
+
+#define PLAFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
+          uint8_t empty_playfield_bg[PLAFIELD_SIZE];
+
+          uint16_t i;
+          for(i = 0; i < PLAFIELD_SIZE; i++){
+            empty_playfield_bg[i] = BACKGROUND_EMPTY_TILE;
+          }
+
+          for(i = 0; i < 4; i++){
             /*  Clear snake from screen, just show borders */
-            set_bkg_tiles(0, 0, 20, 18, snake_bckg);
-            vsync();
+            set_bkg_tiles(1, PLAYFIELD_Y_OFFSET, PLAYFIELD_X_MAX + 1, PLAYFIELD_Y_MAX + 1, empty_playfield_bg);
             delay(flash_interval);
 
             /* show snake on background */
             set_bkg_tiles(0, 0, 20, 18, background_data_snake);
-            vsync();
             delay(flash_interval);
           }
 
