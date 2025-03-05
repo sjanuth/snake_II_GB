@@ -544,10 +544,11 @@ GameStart:
         render_score(&score);
 
         food_counter++;
+        /* TODO: Threshold is not constant but has approx. the following distribution: 5 = 60%, 6 =30%, 7 = 10% */
         if (food_counter >= 5 ){
           /*  Time to show an animal */
           food_counter = 0;
-          //TODO: show animal
+          //TODO: show animal randomly
         }
 
         pos_t rand_pos;
