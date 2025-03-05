@@ -16,8 +16,6 @@
 /* Definitions and globals variables */
 
 #define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
-/*  2 tiles for score, 1 tile for border, 1 tile for grid */
-#define PLAYFIELD_Y_OFFSET (4)
 /*  The playfield has the coordinates
  *  x = [0 -17]
  *  y = [0- 12]*/
@@ -33,26 +31,50 @@
 
 uint8_t joypadCurrent = 0, joypadPrevious = 0;
 
+/*  Array that contains availble fields (just an id from 0 to MAX_NODES -1 ) to place food or animals.
+ *  Since we store the snake in a linked list,
+ *  we will update this array only when needed.
+ *  We could also read the tiles on the screen,
+ *  however reading large junks of data from VRAM is discouraged */
+uint8_t available_fields[MAX_NODES];
+uint8_t available_fields_length;
+
 /*  Since the GB has very limited RAM, using heap will lead to fragmented
  * memory. Thus, we use a memory pool for nodes */
 snake_node_t node_pool[MAX_NODES];
 
 
+/* Function definitions */
+
+/** */
+void find_available_fields(snake_t *snake, pos_t *food, pos_t *animal){
+
+  uint8_t i;
+  for(i = 0; i < MAX_NODES; i++){
+    
+  }
+  available_fields_length = 0;
+  if (food != NULL){
+    /*  food is currently placed on the field */
+  }
+  if (animal != NULL){
+    /*  food is currently placed on the field */
+  }
+}
+
+/**
+ * Get random position to place food on playfield
+ * @param *snake
+ * @return random availble position
+ * */
 pos_t get_random_free_food_position(snake_t *snake){
 
-  pos_t random_pos;
-
-#if 0
-  /*  for testing */
-  random_pos.x = 0;
-  random_pos.y = PLAYFIELD_Y_MAX ;
-  return random_pos;
-#endif
-
-  do{
     /* TODO: This will become an issue when the snake grows longer.
      * It might take too much time to randomly find a free spot and cause lag.
      * Better implement a list with all free positions (numerated from 0 to max_size of all availble fields and draw a single random number */
+  pos_t random_pos;
+
+  do{
 #if 0
     /*  This will be faster but more deterministic */
     random_pos.x = DIV_REG % PLAYFIELD_X_MAX;
@@ -466,8 +488,8 @@ GameStart:
       } else if (anticipated_next_pos.x < 1) {
          anticipated_next_pos.x = PLAYFIELD_WIDTH;
       } else if (anticipated_next_pos.y < PLAYFIELD_Y_OFFSET) {
-        anticipated_next_pos.y = PLAYFIELD_HEIGHT;
-      } else if (anticipated_next_pos.y > PLAYFIELD_HEIGHT) {
+        anticipated_next_pos.y = PLAYFIELD_BOTTOM;
+      } else if (anticipated_next_pos.y > PLAYFIELD_BOTTOM) {
         anticipated_next_pos.y = PLAYFIELD_Y_OFFSET;
       }
 
@@ -501,8 +523,6 @@ GameStart:
             set_bkg_tiles(0, 0, 20, 18, background_data_snake);
             delay(flash_interval);
           }
-
-          /*  TODO: If a new high score was reached, display a notification */
 
           wait_until_pressed_debounced(J_START | J_A );
 
@@ -580,7 +600,7 @@ GameStart:
             food_lies_ahead = 1;
           }
           /* Check wrapped around position */
-          else if(PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_HEIGHT){
+          else if(PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_BOTTOM){
              if(snake_head->y_pos - 1 < PLAYFIELD_Y_OFFSET ){
                food_lies_ahead = 1;
              }
@@ -605,7 +625,7 @@ GameStart:
           }
           /* Check wrapped around position */
           else if(PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_Y_OFFSET){
-              if(snake_head->y_pos + 1 > PLAYFIELD_HEIGHT ){
+              if(snake_head->y_pos + 1 > PLAYFIELD_BOTTOM ){
                 food_lies_ahead = 1;
               }
           }

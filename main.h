@@ -2,7 +2,13 @@
 #define _MAIN_H
 
 #include <stdint.h>
-#define PLAYFIELD_HEIGHT ((144 / 8) - 1 - 1)
+
+
+/*  2 tiles for score, 1 tile for border, 1 tile for grid */
+
+#define PLAYFIELD_Y_OFFSET (4)
+#define PLAYFIELD_BOTTOM ((144 / 8) - 1 - 1)
+#define PLAYFIELD_HEIGHT ((144 / 8) - PLAYFIELD_Y_OFFSET- 1)
 #define PLAYFIELD_WIDTH ((160 / 8) - 1 - 1)
 #define MAX_NODES (PLAYFIELD_WIDTH * PLAYFIELD_HEIGHT)
 
