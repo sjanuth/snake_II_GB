@@ -47,7 +47,6 @@ snake_node_t node_pool[MAX_NODES];
 /**
  * Get random position to place food on playfield
  * @param *snake
- * @param *animal Pointer to animal position (if placed)
  * @return random availble position
  * */
 pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
@@ -217,7 +216,7 @@ GameStart:
 
 #if 0
   // quick test draw metasprite
-  
+
   move_metasprite_ex(animal_spider_metasprite,SPIDER_SPRITE,0,SPIDER_SPRITE,
       PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(0));
   move_metasprite_ex(animal_mouse_metasprite,MOUSE_SPRITE ,0,MOUSE_SPRITE,
@@ -568,7 +567,36 @@ GameStart:
 
           current_food_threshold = distribution_required_food_for_animals[rand() % 10];
           food_counter = 0;
-          //TODO: show animal randomly
+
+          /*  Draw a random position to place the animal */
+
+          animal_pos = get_random_free_food_position(&snake, 1);
+
+#define NB_OF_DIFFERENT_ANIMALS 6
+          uint8_t random_animal_type = rand() % NB_OF_DIFFERENT_ANIMALS ;
+          uint8_t sprite_x = PLAYFIELD_TO_SPRITE_X_POS(animal_pos.x);
+          uint8_t sprite_y = PLAYFIELD_TO_SPRITE_Y_POS(animal_pos.y);
+
+          switch (random_animal_type){
+            case 0:
+              move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0, SPIDER_SPRITE, sprite_x,sprite_y);
+              break;
+            case 1:
+              move_metasprite_ex(animal_mouse_metasprite,MOUSE_SPRITE ,0,MOUSE_SPRITE, sprite_x,sprite_y);
+              break;
+            case 2:
+              move_metasprite_ex(animal_fish_metasprite,FISH_SPRITE ,0,FISH_SPRITE, sprite_x,sprite_y);
+              break;
+            case 3:
+              move_metasprite_ex(animal_bug_metasprite,BUG_SPRITE ,0, BUG_SPRITE, sprite_x,sprite_y);
+              break;
+            case 4:
+              move_metasprite_ex(animal_turtle_metasprite,TURTLE_SPRITE ,0, TURTLE_SPRITE, sprite_x,sprite_y);
+              break;
+            case 5:
+              move_metasprite_ex(animal_ant_metasprite,ANT_SPRITE ,0, ANT_SPRITE, sprite_x,sprite_y);
+              break;
+          }
         }
 
         food_pos = get_random_free_food_position(&snake, 0);
