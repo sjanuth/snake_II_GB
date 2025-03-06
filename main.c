@@ -34,6 +34,8 @@
 
 uint8_t joypadCurrent = 0, joypadPrevious = 0;
 pos_t food_pos;
+pos_t animal_pos;
+const uint8_t distribution_required_food_for_animals[] = {5,5,5,5,5,5,6,6,6,7};
 
 /*  Since the GB has very limited RAM, using heap will lead to fragmented
  * memory. Thus, we use a memory pool for nodes */
@@ -48,7 +50,7 @@ snake_node_t node_pool[MAX_NODES];
  * @param *animal Pointer to animal position (if placed)
  * @return random availble position
  * */
-pos_t get_random_free_food_position(snake_t *snake, pos_t *animal, uint8_t is_for_animal) {
+pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
 
     uint8_t x_upper_limit = is_for_animal ? PLAYFIELD_X_MAX - 1 : PLAYFIELD_X_MAX;
     uint8_t x, y;
@@ -63,8 +65,8 @@ pos_t get_random_free_food_position(snake_t *snake, pos_t *animal, uint8_t is_fo
         if (food_pos.x == x && food_pos.y == y) continue;
 
         // Check animal position (if applicable)
-        if (animal) {
-            if ((animal->x == x && animal->y == y) || (animal->x + 1 == x && animal->y == y)) {
+        if (animal_pos.x != FOOD_NOT_SET) {
+            if ((animal_pos.x == x && animal_pos.y == y) || (animal_pos.x + 1 == x && animal_pos.y == y)) {
                 continue;
             }
         }
@@ -80,7 +82,7 @@ pos_t get_random_free_food_position(snake_t *snake, pos_t *animal, uint8_t is_fo
     for (x = 0; x <= x_upper_limit; x++) {
         for (y = 0; y <= PLAYFIELD_Y_MAX; y++) {
             if (food_pos.x == x && food_pos.y == y) continue;
-            if (animal && ((animal->x == x && animal->y == y) || (animal->x + 1 == x && animal->y == y))) continue;
+            if (animal_pos.x != FOOD_NOT_SET && ((animal_pos.x == x && animal_pos.y == y) || (animal_pos.x + 1 == x && animal_pos.y == y))) continue;
             if (!checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(x), PLAYFIELD_TO_GLOBAL_Y_POS(y))) {
               pos_t result = { .x = x, .y = y };
               return result;
@@ -148,10 +150,10 @@ void main(void) {
   direction_type dpad_direction;
 
   uint16_t score;
-  uint8_t velocity = 9;
+  uint8_t velocity = 4;
   uint8_t has_food_in_mouth = 0;
+  uint8_t current_food_threshold;
   /* Bring up an animal after 5 meals (animals don't count here) */
-  uint8_t food_counter = 0;
 
   DISPLAY_ON;
   SHOW_BKG;
@@ -196,6 +198,8 @@ void main(void) {
   vwf_set_destination(VWF_RENDER_BKG);
 
 GameStart:
+
+  current_food_threshold = distribution_required_food_for_animals[rand() % 10];
 
   /*  main game background with borders */
   set_bkg_tiles(0, 0, 20, 18, snake_bckg);
@@ -294,7 +298,7 @@ GameStart:
 
   /*  randomly place food on a free spot */
 
-  food_pos = get_random_free_food_position(&snake, NULL, 0);
+  food_pos = get_random_free_food_position(&snake, 0);
   move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
 
   /*  Flag to check if a movement is pending to get rendered before catching a
@@ -557,15 +561,17 @@ GameStart:
         score += velocity;
         render_score(&score);
 
+        static uint8_t food_counter = 0;
         food_counter++;
-        /* TODO: Threshold is not constant but has approx. the following distribution: 5 = 60%, 6 =30%, 7 = 10% */
-        if (food_counter >= 5 ){
+        if (food_counter >= current_food_threshold ){
           /*  Time to show an animal */
+
+          current_food_threshold = distribution_required_food_for_animals[rand() % 10];
           food_counter = 0;
           //TODO: show animal randomly
         }
 
-        food_pos = get_random_free_food_position(&snake, NULL, 0);
+        food_pos = get_random_free_food_position(&snake, 0);
 
         if (food_pos.x == NO_FREE_FIELDS_AVAILABLE){
           // TODO: What should we do in this case? Is the game won?
