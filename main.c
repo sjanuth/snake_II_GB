@@ -16,28 +16,24 @@
 /* Definitions and globals variables */
 
 #define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
-/*  The playfield has the coordinates
- *  x = [0 -17]
- *  y = [0- 12]*/
 #define PLAYFIELD_TO_SPRITE_X_POS(X) ((X*8) + 16)
 #define PLAYFIELD_TO_SPRITE_Y_POS(Y) ((4 * 8) + 16 + (8 * Y))
 #define PLAYFIELD_TO_GLOBAL_X_POS(X) (X + 1) /* border */
 #define PLAYFIELD_TO_GLOBAL_Y_POS(Y) (Y + PLAYFIELD_Y_OFFSET) /* borders + 2 for score */
+
+/*  The playfield has the coordinates
+ *  x = [0 -17]
+ *  y = [0- 12]*/
 #define PLAYFIELD_X_MAX (17)
 #define PLAYFIELD_Y_MAX (12)
 #define GBP_FPS 60
 #define STARTPOS_X ((160 / 8) / 2)
 #define STARTPOS_Y ((144 / 8) / 2)
+#define NO_FREE_FIELDS_AVAILABLE (255)
+#define FOOD_NOT_SET (255)
 
 uint8_t joypadCurrent = 0, joypadPrevious = 0;
-
-/*  Array that contains availble fields (just an id from 0 to MAX_NODES -1 ) to place food or animals.
- *  Since we store the snake in a linked list,
- *  we will update this array only when needed.
- *  We could also read the tiles on the screen,
- *  however reading large junks of data from VRAM is discouraged */
-uint8_t available_fields[MAX_NODES];
-uint8_t available_fields_length;
+pos_t food_pos;
 
 /*  Since the GB has very limited RAM, using heap will lead to fragmented
  * memory. Thus, we use a memory pool for nodes */
@@ -46,53 +42,57 @@ snake_node_t node_pool[MAX_NODES];
 
 /* Function definitions */
 
-/** */
-void find_available_fields(snake_t *snake, pos_t *food, pos_t *animal){
-
-  uint8_t i;
-  for(i = 0; i < MAX_NODES; i++){
-    
-  }
-  available_fields_length = 0;
-  if (food != NULL){
-    /*  food is currently placed on the field */
-  }
-  if (animal != NULL){
-    /*  food is currently placed on the field */
-  }
-}
-
 /**
  * Get random position to place food on playfield
  * @param *snake
+ * @param *animal Pointer to animal position (if placed)
  * @return random availble position
  * */
-pos_t get_random_free_food_position(snake_t *snake){
+pos_t get_random_free_food_position(snake_t *snake, pos_t *animal, uint8_t is_for_animal) {
 
-    /* TODO: This will become an issue when the snake grows longer.
-     * It might take too much time to randomly find a free spot and cause lag.
-     * Better implement a list with all free positions (numerated from 0 to max_size of all availble fields and draw a single random number */
-  pos_t random_pos;
+    uint8_t x_upper_limit = is_for_animal ? PLAYFIELD_X_MAX - 1 : PLAYFIELD_X_MAX;
+    uint8_t x, y;
 
-  do{
-#if 0
-    /*  This will be faster but more deterministic */
-    random_pos.x = DIV_REG % PLAYFIELD_X_MAX;
-    random_pos.y = DIV_REG % PLAYFIELD_Y_MAX;
-#else
-    random_pos.x = rand() % PLAYFIELD_X_MAX;
-    random_pos.y= rand() % PLAYFIELD_Y_MAX;
+    // Try a limited number of random positions before falling back to a full scan
+    uint8_t attempts = 50;  // Avoids infinite loops if the field is almost full
+    while (attempts--) {
+        x = rand() % (x_upper_limit + 1);
+        y = rand() % (PLAYFIELD_Y_MAX + 1);
 
-#endif
-  }
-  while(checkPointForCollision(
-        snake,
-        PLAYFIELD_TO_GLOBAL_X_POS(random_pos.x),
-        PLAYFIELD_TO_GLOBAL_Y_POS(random_pos.y))
-      );
+        // Skip food position check (faster than iterating over all)
+        if (food_pos.x == x && food_pos.y == y) continue;
 
-  return random_pos;
+        // Check animal position (if applicable)
+        if (animal) {
+            if ((animal->x == x && animal->y == y) || (animal->x + 1 == x && animal->y == y)) {
+                continue;
+            }
+        }
+
+        // Check collision with the snake
+        if (!checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(x), PLAYFIELD_TO_GLOBAL_Y_POS(y))) {
+            pos_t result = { .x = x, .y = y };
+            return result;  // Return first valid position
+        }
+    }
+
+    // If no random spot found, fall back to slower full scan
+    for (x = 0; x <= x_upper_limit; x++) {
+        for (y = 0; y <= PLAYFIELD_Y_MAX; y++) {
+            if (food_pos.x == x && food_pos.y == y) continue;
+            if (animal && ((animal->x == x && animal->y == y) || (animal->x + 1 == x && animal->y == y))) continue;
+            if (!checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(x), PLAYFIELD_TO_GLOBAL_Y_POS(y))) {
+              pos_t result = { .x = x, .y = y };
+              return result;
+            }
+        }
+    }
+
+    // No valid position found
+    pos_t result = { .x = NO_FREE_FIELDS_AVAILABLE, .y = NO_FREE_FIELDS_AVAILABLE };
+    return result;
 }
+
 
 /**
  * Because sprintf does not support padding with %0xd in GBDK,
@@ -148,11 +148,10 @@ void main(void) {
   direction_type dpad_direction;
 
   uint16_t score;
-  uint8_t velocity = 3;
+  uint8_t velocity = 9;
   uint8_t has_food_in_mouth = 0;
   /* Bring up an animal after 5 meals (animals don't count here) */
   uint8_t food_counter = 0;
-  pos_t food_pos;
 
   DISPLAY_ON;
   SHOW_BKG;
@@ -295,12 +294,7 @@ GameStart:
 
   /*  randomly place food on a free spot */
 
-  pos_t rand_pos;
-  rand_pos = get_random_free_food_position(&snake);
-
-  food_pos.x = rand_pos.x;
-  food_pos.y = rand_pos.y;
-
+  food_pos = get_random_free_food_position(&snake, NULL, 0);
   move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
 
   /*  Flag to check if a movement is pending to get rendered before catching a
@@ -530,7 +524,7 @@ GameStart:
         }
       }
 
-      set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, BACKGROUND_EMPTY_TILE);
+     // set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, BACKGROUND_EMPTY_TILE);
 
       snake.head->y_pos = anticipated_next_pos.y;
       snake.head->x_pos = anticipated_next_pos.x;
@@ -571,11 +565,11 @@ GameStart:
           //TODO: show animal randomly
         }
 
-        pos_t rand_pos;
-        rand_pos = get_random_free_food_position(&snake);
+        food_pos = get_random_free_food_position(&snake, NULL, 0);
 
-        food_pos.x = rand_pos.x;
-        food_pos.y = rand_pos.y;
+        if (food_pos.x == NO_FREE_FIELDS_AVAILABLE){
+          // TODO: What should we do in this case? Is the game won?
+        }
 
         move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
       }else{
