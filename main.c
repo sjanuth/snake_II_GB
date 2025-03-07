@@ -1,25 +1,26 @@
+#include "animals.h"
+#include "animals_tiles.h"
 #include "main.h"
 #include "snake.h"
 #include "snake_bckg.h"
 #include "snake_bckg_tileset.h"
-#include "sprites/food.h"
 #include "splash_bg_asset.h"
-#include <gb/gb.h>
-#include <stdint.h>
-#include <rand.h>
-#include <stdio.h>
+#include "sprites/food.h"
 #include "vwf.h"
 #include "vwf_font.h"
-#include "animals.h"
-#include "animals_tiles.h"
+#include <gb/gb.h>
+#include <rand.h>
+#include <stdint.h>
+#include <stdio.h>
 
 /* Definitions and globals variables */
 
 #define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
-#define PLAYFIELD_TO_SPRITE_X_POS(X) ((X*8) + 16)
+#define PLAYFIELD_TO_SPRITE_X_POS(X) ((X * 8) + 16)
 #define PLAYFIELD_TO_SPRITE_Y_POS(Y) ((4 * 8) + 16 + (8 * Y))
 #define PLAYFIELD_TO_GLOBAL_X_POS(X) (X + 1) /* border */
-#define PLAYFIELD_TO_GLOBAL_Y_POS(Y) (Y + PLAYFIELD_Y_OFFSET) /* borders + 2 for score */
+#define PLAYFIELD_TO_GLOBAL_Y_POS(Y)                                           \
+  (Y + PLAYFIELD_Y_OFFSET) /* borders + 2 for score */
 
 /*  The playfield has the coordinates
  *  x = [0 -17]
@@ -29,18 +30,24 @@
 #define GBP_FPS 60
 #define STARTPOS_X ((160 / 8) / 2)
 #define STARTPOS_Y ((144 / 8) / 2)
+#define STEP_POS_X ((160 / 8) - 2)
+#define STEP_POS_Y (1)
 #define NO_FREE_FIELDS_AVAILABLE (255)
 #define FOOD_NOT_SET (255)
+#define ANIMAL_TOPBAR_X_POS (160 - (2 * 8) - 8 - (2 * 8))
+#define ANIMAL_TOPBAR_Y_POS (16 + 8)
 
 uint8_t joypadCurrent = 0, joypadPrevious = 0;
 pos_t food_pos;
-pos_t animal_pos;
-const uint8_t distribution_required_food_for_animals[] = {5,5,5,5,5,5,6,6,6,7};
+pos_t animal_pos = {.x = FOOD_NOT_SET, .y = FOOD_NOT_SET};
+uint8_t step_counter; /*  required for scoring when animal appears */
+uint8_t shown_animal_type;
+const uint8_t distribution_required_food_for_animals[] = {5, 5, 5, 5, 5,
+                                                          5, 6, 6, 6, 7};
 
 /*  Since the GB has very limited RAM, using heap will lead to fragmented
  * memory. Thus, we use a memory pool for nodes */
 snake_node_t node_pool[MAX_NODES];
-
 
 /* Function definitions */
 
@@ -51,49 +58,56 @@ snake_node_t node_pool[MAX_NODES];
  * */
 pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
 
-    uint8_t x_upper_limit = is_for_animal ? PLAYFIELD_X_MAX - 1 : PLAYFIELD_X_MAX;
-    uint8_t x, y;
+  uint8_t x_upper_limit = is_for_animal ? PLAYFIELD_X_MAX - 1 : PLAYFIELD_X_MAX;
+  uint8_t x, y;
 
-    // Try a limited number of random positions before falling back to a full scan
-    uint8_t attempts = 50;  // Avoids infinite loops if the field is almost full
-    while (attempts--) {
-        x = rand() % (x_upper_limit + 1);
-        y = rand() % (PLAYFIELD_Y_MAX + 1);
+  // Try a limited number of random positions before falling back to a full scan
+  uint8_t attempts = 50; // Avoids infinite loops if the field is almost full
+  while (attempts--) {
+    x = rand() % (x_upper_limit + 1);
+    y = rand() % (PLAYFIELD_Y_MAX + 1);
 
-        // Skip food position check (faster than iterating over all)
-        if (food_pos.x == x && food_pos.y == y) continue;
+    // Skip food position check (faster than iterating over all)
+    if (food_pos.x == x && food_pos.y == y)
+      continue;
 
-        // Check animal position (if applicable)
-        if (animal_pos.x != FOOD_NOT_SET) {
-            if ((animal_pos.x == x && animal_pos.y == y) || (animal_pos.x + 1 == x && animal_pos.y == y)) {
-                continue;
-            }
-        }
-
-        // Check collision with the snake
-        if (!checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(x), PLAYFIELD_TO_GLOBAL_Y_POS(y))) {
-            pos_t result = { .x = x, .y = y };
-            return result;  // Return first valid position
-        }
+    // Check animal position (if applicable)
+    if (animal_pos.x != FOOD_NOT_SET) {
+      if ((animal_pos.x == x && animal_pos.y == y) ||
+          (animal_pos.x + 1 == x && animal_pos.y == y)) {
+        continue;
+      }
     }
 
-    // If no random spot found, fall back to slower full scan
-    for (x = 0; x <= x_upper_limit; x++) {
-        for (y = 0; y <= PLAYFIELD_Y_MAX; y++) {
-            if (food_pos.x == x && food_pos.y == y) continue;
-            if (animal_pos.x != FOOD_NOT_SET && ((animal_pos.x == x && animal_pos.y == y) || (animal_pos.x + 1 == x && animal_pos.y == y))) continue;
-            if (!checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(x), PLAYFIELD_TO_GLOBAL_Y_POS(y))) {
-              pos_t result = { .x = x, .y = y };
-              return result;
-            }
-        }
+    // Check collision with the snake
+    if (!checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(x),
+                                PLAYFIELD_TO_GLOBAL_Y_POS(y))) {
+      pos_t result = {.x = x, .y = y};
+      return result; // Return first valid position
     }
+  }
 
-    // No valid position found
-    pos_t result = { .x = NO_FREE_FIELDS_AVAILABLE, .y = NO_FREE_FIELDS_AVAILABLE };
-    return result;
+  // If no random spot found, fall back to slower full scan
+  for (x = 0; x <= x_upper_limit; x++) {
+    for (y = 0; y <= PLAYFIELD_Y_MAX; y++) {
+      if (food_pos.x == x && food_pos.y == y)
+        continue;
+      if (animal_pos.x != FOOD_NOT_SET &&
+          ((animal_pos.x == x && animal_pos.y == y) ||
+           (animal_pos.x + 1 == x && animal_pos.y == y)))
+        continue;
+      if (!checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(x),
+                                  PLAYFIELD_TO_GLOBAL_Y_POS(y))) {
+        pos_t result = {.x = x, .y = y};
+        return result;
+      }
+    }
+  }
+
+  // No valid position found
+  pos_t result = {.x = NO_FREE_FIELDS_AVAILABLE, .y = NO_FREE_FIELDS_AVAILABLE};
+  return result;
 }
-
 
 /**
  * Because sprintf does not support padding with %0xd in GBDK,
@@ -104,43 +118,116 @@ pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
  * @param width How long the zero padded number should be
  */
 void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
-    uint16_t temp = *number;
-    uint8_t digits = 0;
+  uint16_t temp = *number;
+  uint8_t digits = 0;
 
-    /* Count digits in the number */
-    do {
-        digits++;
-        temp /= 10;
-    } while (temp > 0);
+  /* Count digits in the number */
+  do {
+    digits++;
+    temp /= 10;
+  } while (temp > 0);
 
-    uint8_t padding = width - digits;
-    uint8_t i = 0;
+  uint8_t padding = width - digits;
+  uint8_t i = 0;
 
-    while (padding-- > 0) {
-        buffer[i++] = '0';
-    }
+  while (padding-- > 0) {
+    buffer[i++] = '0';
+  }
 
-    sprintf(buffer + i, "%d", *number);
+  sprintf(buffer + i, "%d", *number);
 }
 
-void render_score(uint16_t *score){
+
+void uint8_to_str_padded(char *buffer, uint8_t number, uint8_t width) {
+  uint16_t temp = number;
+  uint8_t digits = 0;
+
+  /* Count digits in the number */
+  do {
+    digits++;
+    temp /= 10;
+  } while (temp > 0);
+
+  uint8_t padding = width - digits;
+  uint8_t i = 0;
+
+  while (padding-- > 0) {
+    buffer[i++] = '0';
+  }
+
+  sprintf(buffer + i, "%d", number);
+}
+
+void render_steps() {
+  char str_steps[3];
+  uint8_to_str_padded(str_steps, step_counter, 2);
+  vwf_draw_text( STEP_POS_X  , STEP_POS_Y, 80, (unsigned char *)str_steps);
+}
+
+void render_score(uint16_t *score) {
   char str_score[5];
   int_to_str_padded(str_score, score, 4);
-  vwf_draw_text(1, 1, 60, (unsigned char *) str_score);
+  vwf_draw_text(1, 1, 60, (unsigned char *)str_score);
 }
 
-uint8_t is_button_pressed_debounced(uint8_t mask){
+uint8_t is_button_pressed_debounced(uint8_t mask) {
   return (joypadCurrent & mask) && !(joypadPrevious & mask);
 }
 
-void wait_until_pressed_debounced(uint8_t mask){
+void wait_until_pressed_debounced(uint8_t mask) {
   joypadPrevious = joypadCurrent;
   joypadCurrent = joypad();
-  while (!(joypadCurrent & mask ) || (joypadPrevious & mask)) {
+  while (!(joypadCurrent & mask) || (joypadPrevious & mask)) {
     vsync();
     joypadPrevious = joypadCurrent;
     joypadCurrent = joypad();
   }
+}
+
+void clear_animal_related_stuff(){
+
+          set_bkg_tile_xy( STEP_POS_X, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
+          set_bkg_tile_xy( STEP_POS_X + 1, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
+
+
+          switch (shown_animal_type) {
+          case 0:
+            move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0,
+                               SPIDER_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
+            move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0, 13,
+                               FOOD_NOT_SET, FOOD_NOT_SET);
+            break;
+          case 1:
+            move_metasprite_ex(animal_mouse_metasprite, MOUSE_SPRITE, 0,
+                               MOUSE_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
+            move_metasprite_ex(animal_mouse_metasprite, MOUSE_SPRITE, 0, 15,
+                               FOOD_NOT_SET, FOOD_NOT_SET);
+            break;
+          case 2:
+            move_metasprite_ex(animal_fish_metasprite, FISH_SPRITE, 0,
+                               FISH_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
+            move_metasprite_ex(animal_fish_metasprite, FISH_SPRITE, 0, 17,
+                               FOOD_NOT_SET, FOOD_NOT_SET);
+            break;
+          case 3:
+            move_metasprite_ex(animal_bug_metasprite, BUG_SPRITE, 0, BUG_SPRITE,
+                               FOOD_NOT_SET, FOOD_NOT_SET);
+            move_metasprite_ex(animal_bug_metasprite, BUG_SPRITE, 0, 19,
+                               FOOD_NOT_SET, FOOD_NOT_SET);
+            break;
+          case 4:
+            move_metasprite_ex(animal_turtle_metasprite, TURTLE_SPRITE, 0,
+                               TURTLE_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
+            move_metasprite_ex(animal_turtle_metasprite, TURTLE_SPRITE, 0, 21,
+                               FOOD_NOT_SET, FOOD_NOT_SET);
+            break;
+          case 5:
+            move_metasprite_ex(animal_ant_metasprite, ANT_SPRITE, 0, ANT_SPRITE,
+                               FOOD_NOT_SET, FOOD_NOT_SET);
+            move_metasprite_ex(animal_ant_metasprite, ANT_SPRITE, 0, 21,
+                               FOOD_NOT_SET, FOOD_NOT_SET);
+            break;
+          }
 }
 
 void main(void) {
@@ -148,6 +235,7 @@ void main(void) {
   direction_type snake_direction;
   direction_type dpad_direction;
 
+  uint8_t food_counter;
   uint16_t score;
   uint8_t velocity = 4;
   uint8_t has_food_in_mouth = 0;
@@ -183,10 +271,11 @@ void main(void) {
 #define TILE_SIZE (16) /*  8x8 Bits and 2 bit color */
   set_sprite_data(FOOD_SPRITE, 1, food);
   set_sprite_data(SPIDER_SPRITE, 2, &animals_tiles[0]);
-  set_sprite_data(MOUSE_SPRITE , 2, &animals_tiles[ANIMAL_MOUSE_1 * TILE_SIZE]);
-  set_sprite_data(FISH_SPRITE , 2, &animals_tiles[ANIMAL_FISH_1 * TILE_SIZE]);
-  set_sprite_data(BUG_SPRITE , 2, &animals_tiles[ANIMAL_BUG_1 * TILE_SIZE]);
-  set_sprite_data(TURTLE_SPRITE, 2, &animals_tiles[ANIMAL_TURTLE_1 * TILE_SIZE]);
+  set_sprite_data(MOUSE_SPRITE, 2, &animals_tiles[ANIMAL_MOUSE_1 * TILE_SIZE]);
+  set_sprite_data(FISH_SPRITE, 2, &animals_tiles[ANIMAL_FISH_1 * TILE_SIZE]);
+  set_sprite_data(BUG_SPRITE, 2, &animals_tiles[ANIMAL_BUG_1 * TILE_SIZE]);
+  set_sprite_data(TURTLE_SPRITE, 2,
+                  &animals_tiles[ANIMAL_TURTLE_1 * TILE_SIZE]);
   set_sprite_data(ANT_SPRITE, 2, &animals_tiles[ANIMAL_ANT_1 * TILE_SIZE]);
 
   /*  Load fonts */
@@ -199,6 +288,10 @@ void main(void) {
 GameStart:
 
   current_food_threshold = distribution_required_food_for_animals[rand() % 10];
+  animal_pos.x = FOOD_NOT_SET;
+  animal_pos.y = FOOD_NOT_SET;
+  clear_animal_related_stuff();
+  food_counter = 0;
 
   /*  main game background with borders */
   set_bkg_tiles(0, 0, 20, 18, snake_bckg);
@@ -210,30 +303,9 @@ GameStart:
   dpad_direction = RIGHT;
 
   uint16_t i;
-  for(i = 0; i < MAX_NODES; i++){
+  for (i = 0; i < MAX_NODES; i++) {
     freeNode(&node_pool[i]);
   }
-
-#if 0
-  // quick test draw metasprite
-
-  move_metasprite_ex(animal_spider_metasprite,SPIDER_SPRITE,0,SPIDER_SPRITE,
-      PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(0));
-  move_metasprite_ex(animal_mouse_metasprite,MOUSE_SPRITE ,0,MOUSE_SPRITE,
-     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(1));
-  move_metasprite_ex(animal_fish_metasprite,FISH_SPRITE ,0,FISH_SPRITE,
-     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(2));
-  move_metasprite_ex(animal_bug_metasprite,BUG_SPRITE ,0, BUG_SPRITE,
-     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(3));
-  move_metasprite_ex(animal_turtle_metasprite,TURTLE_SPRITE, 0, TURTLE_SPRITE,
-     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(4));
-  move_metasprite_ex(animal_ant_metasprite,ANT_SPRITE ,0, ANT_SPRITE,
-     PLAYFIELD_TO_SPRITE_X_POS(0),PLAYFIELD_TO_SPRITE_Y_POS(5));
-
-  move_metasprite_ex(animal_spider_metasprite,SPIDER_SPRITE,0,13,
-      160 - (2*8) - 8 - (2 * 8),16 + 8);
-
-#endif
 
   snake_node_t *snake_head = allocateNode();
   if (snake_head) {
@@ -298,7 +370,8 @@ GameStart:
   /*  randomly place food on a free spot */
 
   food_pos = get_random_free_food_position(&snake, 0);
-  move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
+  move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x),
+              (uint8_t)PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
 
   /*  Flag to check if a movement is pending to get rendered before catching a
    * new one */
@@ -314,11 +387,11 @@ GameStart:
     joypadPrevious = joypadCurrent;
     joypadCurrent = joypad();
 
-    if ((joypadCurrent & J_START) && !(joypadPrevious & J_START)){
+    if ((joypadCurrent & J_START) && !(joypadPrevious & J_START)) {
 
       /*  Take a snapshot of the current background */
-      uint8_t background_data_snake[20*18];
-      wait_vbl_done();  // Wait for VBlank before reading
+      uint8_t background_data_snake[20 * 18];
+      wait_vbl_done(); // Wait for VBlank before reading
       get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
 
       /*  Just show Borders without score or snake */
@@ -359,6 +432,21 @@ GameStart:
 
     if (update_screen_counter % (GBP_FPS / velocity) == 0) {
 
+      if (animal_pos.x != FOOD_NOT_SET) {
+        if (step_counter > 1) {
+          step_counter--;
+          render_steps();
+        } else {
+
+          /* reset position and remove animal sprites */
+          animal_pos.x = FOOD_NOT_SET;
+          animal_pos.y = FOOD_NOT_SET;
+
+          /*  clear step score */
+          clear_animal_related_stuff();
+
+        }
+      }
 
       /*  Instead of moving and updating every node in the linked list,
        *  we just insert a new node after the head and remove the node before
@@ -382,7 +470,7 @@ GameStart:
 
       direction_type opposite_dir = OPPOSITE_DIRECTION(snake_direction);
       snake.head->dir_to_next_node = opposite_dir;
-      if(has_food_in_mouth){
+      if (has_food_in_mouth) {
         if (snake_direction == UP && dir_n == DOWN) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_UP;
         } else if (snake_direction == RIGHT && dir_n == DOWN) {
@@ -416,7 +504,7 @@ GameStart:
         }
       }
 
-      else{
+      else {
         /* normal without food eaten */
         if (snake_direction == UP && dir_n == DOWN) {
           new_node->tile_to_render = SNAKE_BODY_STRAIGHT_UP;
@@ -459,8 +547,8 @@ GameStart:
       /* update coordinates for the head */
 
       pos_t anticipated_next_pos = {
-        .x = snake.head->x_pos,
-        .y = snake.head->y_pos,
+          .x = snake.head->x_pos,
+          .y = snake.head->y_pos,
       };
 
       switch (snake_direction) {
@@ -481,9 +569,9 @@ GameStart:
       /* Check if next position touches the borders and a wrap around occurs */
 
       if (anticipated_next_pos.x > PLAYFIELD_WIDTH) {
-         anticipated_next_pos.x = 1;
+        anticipated_next_pos.x = 1;
       } else if (anticipated_next_pos.x < 1) {
-         anticipated_next_pos.x = PLAYFIELD_WIDTH;
+        anticipated_next_pos.x = PLAYFIELD_WIDTH;
       } else if (anticipated_next_pos.y < PLAYFIELD_Y_OFFSET) {
         anticipated_next_pos.y = PLAYFIELD_BOTTOM;
       } else if (anticipated_next_pos.y > PLAYFIELD_BOTTOM) {
@@ -492,28 +580,32 @@ GameStart:
 
       /*  Check if snake will bite itself */
 
-      if(checkPointForCollision(&snake, anticipated_next_pos.x, anticipated_next_pos.y)){
+      if (checkPointForCollision(&snake, anticipated_next_pos.x,
+                                 anticipated_next_pos.y)) {
 
-        /*  Edge case: if the snake will bite in the tail, the game will continue */
+        /*  Edge case: if the snake will bite in the tail, the game will
+         * continue */
 
-        if(!((snake.tail->x_pos == anticipated_next_pos.x) && (snake.tail->y_pos == anticipated_next_pos.y))){
-#define flash_interval ((1600/4)/2)
+        if (!((snake.tail->x_pos == anticipated_next_pos.x) &&
+              (snake.tail->y_pos == anticipated_next_pos.y))) {
+#define flash_interval ((1600 / 4) / 2)
 
-          uint8_t background_data_snake[20*18];
-          wait_vbl_done();  // Wait for VBlank before reading
+          uint8_t background_data_snake[20 * 18];
+          wait_vbl_done(); // Wait for VBlank before reading
           get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
 
 #define PLAFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
           uint8_t empty_playfield_bg[PLAFIELD_SIZE];
 
           uint16_t i;
-          for(i = 0; i < PLAFIELD_SIZE; i++){
+          for (i = 0; i < PLAFIELD_SIZE; i++) {
             empty_playfield_bg[i] = BACKGROUND_EMPTY_TILE;
           }
 
-          for(i = 0; i < 4; i++){
+          for (i = 0; i < 4; i++) {
             /*  Clear snake from screen, just show borders */
-            set_bkg_tiles(1, PLAYFIELD_Y_OFFSET, PLAYFIELD_X_MAX + 1, PLAYFIELD_Y_MAX + 1, empty_playfield_bg);
+            set_bkg_tiles(1, PLAYFIELD_Y_OFFSET, PLAYFIELD_X_MAX + 1,
+                          PLAYFIELD_Y_MAX + 1, empty_playfield_bg);
             delay(flash_interval);
 
             /* show snake on background */
@@ -521,20 +613,21 @@ GameStart:
             delay(flash_interval);
           }
 
-          wait_until_pressed_debounced(J_START | J_A );
+          wait_until_pressed_debounced(J_START | J_A);
 
           goto GameStart;
         }
       }
 
-     // set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, BACKGROUND_EMPTY_TILE);
+      // set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos,
+      // BACKGROUND_EMPTY_TILE);
 
       snake.head->y_pos = anticipated_next_pos.y;
       snake.head->x_pos = anticipated_next_pos.x;
 
       /*  Update tail and remove node before tail */
 
-      if(!has_food_in_mouth){
+      if (!has_food_in_mouth) {
         set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
                         BACKGROUND_EMPTY_TILE);
         snake_node_t *second_last_node = snake.tail->prev_node;
@@ -555,15 +648,16 @@ GameStart:
 
       /*  Check if food is eaten */
 
-      if (checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y))){
+      if (checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x),
+                                 PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y))) {
         has_food_in_mouth = 1;
         score += velocity;
         render_score(&score);
 
-        static uint8_t food_counter = 0;
         food_counter++;
-        if (food_counter >= current_food_threshold ){
+        if (food_counter >= current_food_threshold) {
           /*  Time to show an animal */
+          step_counter = 20;
 
           current_food_threshold = distribution_required_food_for_animals[rand() % 10];
           food_counter = 0;
@@ -573,40 +667,59 @@ GameStart:
           animal_pos = get_random_free_food_position(&snake, 1);
 
 #define NB_OF_DIFFERENT_ANIMALS 6
-          uint8_t random_animal_type = rand() % NB_OF_DIFFERENT_ANIMALS ;
+          shown_animal_type = rand() % NB_OF_DIFFERENT_ANIMALS;
           uint8_t sprite_x = PLAYFIELD_TO_SPRITE_X_POS(animal_pos.x);
           uint8_t sprite_y = PLAYFIELD_TO_SPRITE_Y_POS(animal_pos.y);
 
-          switch (random_animal_type){
-            case 0:
-              move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0, SPIDER_SPRITE, sprite_x,sprite_y);
-              break;
-            case 1:
-              move_metasprite_ex(animal_mouse_metasprite,MOUSE_SPRITE ,0,MOUSE_SPRITE, sprite_x,sprite_y);
-              break;
-            case 2:
-              move_metasprite_ex(animal_fish_metasprite,FISH_SPRITE ,0,FISH_SPRITE, sprite_x,sprite_y);
-              break;
-            case 3:
-              move_metasprite_ex(animal_bug_metasprite,BUG_SPRITE ,0, BUG_SPRITE, sprite_x,sprite_y);
-              break;
-            case 4:
-              move_metasprite_ex(animal_turtle_metasprite,TURTLE_SPRITE ,0, TURTLE_SPRITE, sprite_x,sprite_y);
-              break;
-            case 5:
-              move_metasprite_ex(animal_ant_metasprite,ANT_SPRITE ,0, ANT_SPRITE, sprite_x,sprite_y);
-              break;
+          switch (shown_animal_type) {
+          case 0:
+            move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0,
+                               SPIDER_SPRITE, sprite_x, sprite_y);
+            move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0, 13,
+                               ANIMAL_TOPBAR_X_POS, ANIMAL_TOPBAR_Y_POS);
+            break;
+          case 1:
+            move_metasprite_ex(animal_mouse_metasprite, MOUSE_SPRITE, 0,
+                               MOUSE_SPRITE, sprite_x, sprite_y);
+            move_metasprite_ex(animal_mouse_metasprite, MOUSE_SPRITE, 0, 15,
+                               ANIMAL_TOPBAR_X_POS, ANIMAL_TOPBAR_Y_POS);
+            break;
+          case 2:
+            move_metasprite_ex(animal_fish_metasprite, FISH_SPRITE, 0,
+                               FISH_SPRITE, sprite_x, sprite_y);
+            move_metasprite_ex(animal_fish_metasprite, FISH_SPRITE, 0, 17,
+                               ANIMAL_TOPBAR_X_POS, ANIMAL_TOPBAR_Y_POS);
+            break;
+          case 3:
+            move_metasprite_ex(animal_bug_metasprite, BUG_SPRITE, 0, BUG_SPRITE,
+                               sprite_x, sprite_y);
+            move_metasprite_ex(animal_bug_metasprite, BUG_SPRITE, 0, 19,
+                               ANIMAL_TOPBAR_X_POS, ANIMAL_TOPBAR_Y_POS);
+            break;
+          case 4:
+            move_metasprite_ex(animal_turtle_metasprite, TURTLE_SPRITE, 0,
+                               TURTLE_SPRITE, sprite_x, sprite_y);
+            move_metasprite_ex(animal_turtle_metasprite, TURTLE_SPRITE, 0, 21,
+                               ANIMAL_TOPBAR_X_POS, ANIMAL_TOPBAR_Y_POS);
+            break;
+          case 5:
+            move_metasprite_ex(animal_ant_metasprite, ANT_SPRITE, 0, ANT_SPRITE,
+                               sprite_x, sprite_y);
+            move_metasprite_ex(animal_ant_metasprite, ANT_SPRITE, 0, 21,
+                               ANIMAL_TOPBAR_X_POS, ANIMAL_TOPBAR_Y_POS);
+            break;
           }
         }
 
         food_pos = get_random_free_food_position(&snake, 0);
 
-        if (food_pos.x == NO_FREE_FIELDS_AVAILABLE){
+        if (food_pos.x == NO_FREE_FIELDS_AVAILABLE) {
           // TODO: What should we do in this case? Is the game won?
         }
 
-        move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x), (uint8_t) PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
-      }else{
+        move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x),
+                    (uint8_t)PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
+      } else {
         has_food_in_mouth = 0;
       }
 
@@ -622,61 +735,69 @@ GameStart:
 
       uint8_t food_lies_ahead = 0;
       switch (snake_direction) {
-        case UP:
-          if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){break;};
-          if(snake_head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){
-            food_lies_ahead = 1;
-          }
-          /* Check wrapped around position */
-          else if(PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_BOTTOM){
-             if(snake_head->y_pos - 1 < PLAYFIELD_Y_OFFSET ){
-               food_lies_ahead = 1;
-             }
-          }
-         break;
-        case RIGHT:
-          if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){break;};
-          if(snake_head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){
-            food_lies_ahead = 1;
-          }
-          /* Check wrapped around position */
-          else if(PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == 1){
-              if(snake_head->x_pos + 1 > PLAYFIELD_WIDTH ){
-                food_lies_ahead = 1;
-              }
-          }
+      case UP:
+        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
           break;
-        case DOWN:
-          if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){break;};
-          if(snake_head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){
+        };
+        if (snake_head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
+          food_lies_ahead = 1;
+        }
+        /* Check wrapped around position */
+        else if (PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_BOTTOM) {
+          if (snake_head->y_pos - 1 < PLAYFIELD_Y_OFFSET) {
             food_lies_ahead = 1;
           }
-          /* Check wrapped around position */
-          else if(PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_Y_OFFSET){
-              if(snake_head->y_pos + 1 > PLAYFIELD_BOTTOM ){
-                food_lies_ahead = 1;
-              }
-          }
+        }
+        break;
+      case RIGHT:
+        if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
           break;
-        case LEFT:
-          if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)){break;};
-          if(snake_head->x_pos - 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)){
+        };
+        if (snake_head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
+          food_lies_ahead = 1;
+        }
+        /* Check wrapped around position */
+        else if (PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == 1) {
+          if (snake_head->x_pos + 1 > PLAYFIELD_WIDTH) {
             food_lies_ahead = 1;
           }
-          /* Check wrapped around position */
-          else if(PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == PLAYFIELD_WIDTH){
-              if(snake_head->x_pos -1 < 1 ){
-                food_lies_ahead = 1;
-              }
+        }
+        break;
+      case DOWN:
+        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
+          break;
+        };
+        if (snake_head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
+          food_lies_ahead = 1;
+        }
+        /* Check wrapped around position */
+        else if (PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_Y_OFFSET) {
+          if (snake_head->y_pos + 1 > PLAYFIELD_BOTTOM) {
+            food_lies_ahead = 1;
           }
-
+        }
+        break;
+      case LEFT:
+        if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
+          break;
+        };
+        if (snake_head->x_pos - 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
+          food_lies_ahead = 1;
+        }
+        /* Check wrapped around position */
+        else if (PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == PLAYFIELD_WIDTH) {
+          if (snake_head->x_pos - 1 < 1) {
+            food_lies_ahead = 1;
+          }
+        }
       }
 
       /*  Update background tiles */
 
-      if(food_lies_ahead){
-        set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_direction + SNAKE_MOUTH_OPEN_UP);
-      }else{
+      if (food_lies_ahead) {
+        set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos,
+                        snake_direction + SNAKE_MOUTH_OPEN_UP);
+      } else {
         set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_direction);
       }
       snake_node_t *node_after_head = snake.head->next_node;
