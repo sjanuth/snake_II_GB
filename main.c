@@ -239,6 +239,7 @@ void main(void) {
   uint16_t score;
   uint8_t velocity = 4;
   uint8_t has_food_in_mouth = 0;
+  uint8_t has_animal_in_mouth = 0;
   uint8_t current_food_threshold;
   /* Bring up an animal after 5 meals (animals don't count here) */
 
@@ -470,7 +471,7 @@ GameStart:
 
       direction_type opposite_dir = OPPOSITE_DIRECTION(snake_direction);
       snake.head->dir_to_next_node = opposite_dir;
-      if (has_food_in_mouth) {
+      if (has_food_in_mouth || has_animal_in_mouth) {
         if (snake_direction == UP && dir_n == DOWN) {
           new_node->tile_to_render = SNAKE_FOOD_EATEN_UP;
         } else if (snake_direction == RIGHT && dir_n == DOWN) {
@@ -628,8 +629,7 @@ GameStart:
       /*  Update tail and remove node before tail */
 
       if (!has_food_in_mouth) {
-        set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
-                        BACKGROUND_EMPTY_TILE);
+        set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos, BACKGROUND_EMPTY_TILE);
         snake_node_t *second_last_node = snake.tail->prev_node;
         snake.tail->x_pos = second_last_node->x_pos;
         snake.tail->y_pos = second_last_node->y_pos;
@@ -719,8 +719,22 @@ GameStart:
 
         move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x),
                     (uint8_t)PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
-      } else {
+      }
+      else if(checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) ||
+          checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1), PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) ){
+
+        animal_pos.x = FOOD_NOT_SET;
+        animal_pos.y = FOOD_NOT_SET;
+        clear_animal_related_stuff();
+        score += (45 + (velocity * 5)) - ((20 - step_counter) * 2);
+        render_score(&score);
+
+        /*  a different flag to show the correct tile, but when eating an animal, the snake should not grow */
+        has_animal_in_mouth = 1;
+      }
+      else {
         has_food_in_mouth = 0;
+        has_animal_in_mouth = 0;
       }
 
       /*  Toggle the flag and indicate that we have rendered the tile and can
