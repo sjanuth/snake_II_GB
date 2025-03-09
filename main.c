@@ -1,6 +1,7 @@
 #include "animals.h"
 #include "animals_tiles.h"
 #include "main.h"
+#include "gb/gb.h"
 #include "gb/hardware.h"
 #include "snake.h"
 #include "snake_bckg.h"
@@ -64,6 +65,33 @@ void play_eating_sound() {
     NR14_REG= 0x87;  // Start sound, enable length counter
 }
 
+void play_game_over_sound(){
+
+    NR52_REG = 0x80;  // Enable sound
+    NR50_REG = 0x77;  // Set volume (max)
+    NR51_REG  = 0x11;  // Enable sound on both channels
+
+    NR10_REG= 0x32;  // Sweep settings (increase pitch)
+    NR11_REG= 0xBF;  // Duty cycle 50% (square wave)
+    NR12_REG= 0xFF;  // Envelope: Max volume, short decay
+    NR13_REG= 0x61;  // Frequency (higher values = lower pitch)
+    NR14_REG= 0x85;  // Start sound, enable length counter
+    delay(12);
+    NR52_REG = 0x80;  // Enable sound
+    NR10_REG= 0x32;  // Sweep settings (increase pitch)
+    NR11_REG= 0xBF;  // Duty cycle 50% (square wave)
+    NR12_REG= 0xFF;  // Envelope: Max volume, short decay
+    NR13_REG= 0x61;  // Frequency (higher values = lower pitch)
+    NR14_REG= 0x85;  // Start sound, enable length counter
+    delay(20);
+    NR52_REG = 0x80;  // Enable sound
+    NR10_REG= 0x32;  // Sweep settings (increase pitch)
+    NR11_REG= 0xBF;  // Duty cycle 50% (square wave)
+    NR12_REG= 0xFF;  // Envelope: Max volume, short decay
+    NR13_REG= 0x61;  // Frequency (higher values = lower pitch)
+    NR14_REG= 0x85;  // Start sound, enable length counter
+
+}
 /**
  * Get random position to place food on playfield
  * @param *snake
@@ -271,7 +299,6 @@ void main(void) {
   set_bkg_tiles(0, 1, 20, 15, splash_bg_asset_map);
 
   /*  wait on splash screen until start button is pressed */
-
 #if 1
   wait_until_pressed_debounced(J_START | J_A | J_B);
 #else
@@ -607,6 +634,7 @@ GameStart:
           wait_vbl_done(); // Wait for VBlank before reading
           get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
 
+          play_game_over_sound();
 #define PLAFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
           uint8_t empty_playfield_bg[PLAFIELD_SIZE];
 
@@ -625,7 +653,6 @@ GameStart:
             set_bkg_tiles(0, 0, 20, 18, background_data_snake);
             delay(flash_interval);
           }
-
           wait_until_pressed_debounced(J_START | J_A);
 
           goto GameStart;
