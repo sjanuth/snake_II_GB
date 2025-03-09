@@ -1,6 +1,7 @@
 #include "animals.h"
 #include "animals_tiles.h"
 #include "main.h"
+#include "gb/hardware.h"
 #include "snake.h"
 #include "snake_bckg.h"
 #include "snake_bckg_tileset.h"
@@ -50,6 +51,18 @@ extern snake_node_t node_pool[MAX_NODES] ;
 
 
 /* Function definitions */
+
+void play_eating_sound() {
+    NR52_REG = 0x80;  // Enable sound
+    NR50_REG = 0x77;  // Set volume (max)
+    NR51_REG  = 0x11;  // Enable sound on both channels
+
+    NR10_REG= 0x16;  // Sweep settings (increase pitch)
+    NR11_REG= 0x3F;  // Duty cycle 50% (square wave)
+    NR12_REG= 0xD0;  // Envelope: Max volume, short decay
+    NR13_REG= 0x90;  // Frequency (higher values = lower pitch)
+    NR14_REG= 0x87;  // Start sound, enable length counter
+}
 
 /**
  * Get random position to place food on playfield
@@ -718,6 +731,8 @@ GameStart:
 
         move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x),
                     (uint8_t)PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
+
+        play_eating_sound();
       }
       else if(checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) ||
           checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1), PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) ){
@@ -728,6 +743,7 @@ GameStart:
         score += (45 + (velocity * 5)) - ((20 - step_counter) * 2);
         render_score(&score);
 
+        play_eating_sound();
         /*  a different flag to show the correct tile, but when eating an animal, the snake should not grow */
         has_animal_in_mouth = 1;
       }
