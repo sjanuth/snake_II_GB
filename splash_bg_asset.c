@@ -4,6 +4,7 @@
 #include <gbdk/platform.h>
 #include <gbdk/metasprites.h>
 
+#pragma bank 255
 BANKREF(splash_bg_asset)
 
 const palette_color_t splash_bg_asset_palettes[4] = {

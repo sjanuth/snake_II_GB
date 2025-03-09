@@ -27,4 +27,5 @@ void freeNode(snake_node_t* obj) ;
 
 uint8_t checkPointForCollision(snake_t *snake, uint8_t x, uint8_t y);
 
+
 #endif

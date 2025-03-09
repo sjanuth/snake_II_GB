@@ -2,7 +2,7 @@
 #define _MAIN_H
 
 #include <stdint.h>
-
+#include <gb/gb.h>
 
 /*  2 tiles for score, 1 tile for border, 1 tile for grid */
 

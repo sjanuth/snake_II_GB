@@ -8,7 +8,6 @@
 #include "sprites/food.h"
 #include "vwf.h"
 #include "vwf_font.h"
-#include <gb/gb.h>
 #include <rand.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -45,9 +44,10 @@ uint8_t shown_animal_type;
 const uint8_t distribution_required_food_for_animals[] = {5, 5, 5, 5, 5,
                                                           5, 6, 6, 6, 7};
 
-/*  Since the GB has very limited RAM, using heap will lead to fragmented
- * memory. Thus, we use a memory pool for nodes */
-snake_node_t node_pool[MAX_NODES];
+extern snake_node_t node_pool[MAX_NODES] ;
+
+/*  Function declarations */
+
 
 /* Function definitions */
 
@@ -108,6 +108,7 @@ pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
   pos_t result = {.x = NO_FREE_FIELDS_AVAILABLE, .y = NO_FREE_FIELDS_AVAILABLE};
   return result;
 }
+
 
 /**
  * Because sprintf does not support padding with %0xd in GBDK,
@@ -275,14 +276,12 @@ void main(void) {
   set_sprite_data(MOUSE_SPRITE, 2, &animals_tiles[ANIMAL_MOUSE_1 * TILE_SIZE]);
   set_sprite_data(FISH_SPRITE, 2, &animals_tiles[ANIMAL_FISH_1 * TILE_SIZE]);
   set_sprite_data(BUG_SPRITE, 2, &animals_tiles[ANIMAL_BUG_1 * TILE_SIZE]);
-  set_sprite_data(TURTLE_SPRITE, 2,
-                  &animals_tiles[ANIMAL_TURTLE_1 * TILE_SIZE]);
+  set_sprite_data(TURTLE_SPRITE, 2, &animals_tiles[ANIMAL_TURTLE_1 * TILE_SIZE]);
   set_sprite_data(ANT_SPRITE, 2, &animals_tiles[ANIMAL_ANT_1 * TILE_SIZE]);
 
   /*  Load fonts */
 
   vwf_load_font(0, vwf_font, BANK(vwf_font));
-
   vwf_activate_font(0);
   vwf_set_destination(VWF_RENDER_BKG);
 
@@ -800,6 +799,68 @@ GameStart:
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == PLAYFIELD_WIDTH) {
+          if (snake_head->x_pos - 1 < 1) {
+            food_lies_ahead = 1;
+          }
+        }
+      }
+
+      /* Now check again for animals */
+
+      switch (snake_direction) {
+      case UP:
+        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) &&
+            snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
+          break;
+        };
+        if (snake_head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
+          food_lies_ahead = 1;
+        }
+        /* Check wrapped around position */
+        else if (PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y) == PLAYFIELD_BOTTOM) {
+          if (snake_head->y_pos - 1 < PLAYFIELD_Y_OFFSET) {
+            food_lies_ahead = 1;
+          }
+        }
+        break;
+      case RIGHT:
+        if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
+          break;
+        };
+        if (snake_head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x)) {
+          food_lies_ahead = 1;
+        }
+        /* Check wrapped around position */
+        else if (PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) == 1) {
+          if (snake_head->x_pos + 1 > PLAYFIELD_WIDTH) {
+            food_lies_ahead = 1;
+          }
+        }
+        break;
+      case DOWN:
+        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) && 
+            snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
+          break;
+        };
+        if (snake_head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
+          food_lies_ahead = 1;
+        }
+        /* Check wrapped around position */
+        else if (PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y) == PLAYFIELD_Y_OFFSET) {
+          if (snake_head->y_pos + 1 > PLAYFIELD_BOTTOM) {
+            food_lies_ahead = 1;
+          }
+        }
+        break;
+      case LEFT:
+        if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
+          break;
+        };
+        if (snake_head->x_pos - 1 == PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
+          food_lies_ahead = 1;
+        }
+        /* Check wrapped around position */
+        else if (PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1) == PLAYFIELD_WIDTH) {
           if (snake_head->x_pos - 1 < 1) {
             food_lies_ahead = 1;
           }

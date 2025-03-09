@@ -17,6 +17,12 @@ ifdef GBDK_DEBUG
 	LCCFLAGS += -debug -v
 endif
 
+# Bank configuraition
+# ya4 = 4 RAM banks
+# yo4 = 4 ROM banks
+# yt0x1a =  1A-ROM+MBC5+RAM Cartridge type
+
+LCCFLAGS += -Wl-yt0x1A -Wl-yo4 -Wl-ya4 -autobank
 
 # You can set the name of the .gb ROM file here
 PROJECTNAME    = Snake_3310_GB
