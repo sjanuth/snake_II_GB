@@ -279,6 +279,8 @@ void main(void) {
 
   uint8_t food_counter;
   uint16_t score;
+  /*  TODO: Load from savestate */
+  uint16_t top_score = 0;
   uint8_t velocity = 4;
   uint8_t has_food_in_mouth = 0;
   uint8_t has_animal_in_mouth = 0;
@@ -630,16 +632,22 @@ GameStart:
               (snake.tail->y_pos == anticipated_next_pos.y))) {
 #define flash_interval ((1600 / 4) / 2)
 
+          if (score > top_score) {
+            /*  TODO: save new top score in savestate */
+            top_score = score;
+            vwf_draw_text(6, 1, 90, "NEW TOP SCORE");
+          }
+
           uint8_t background_data_snake[20 * 18];
           wait_vbl_done(); // Wait for VBlank before reading
           get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
 
           play_game_over_sound();
-#define PLAFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
-          uint8_t empty_playfield_bg[PLAFIELD_SIZE];
+#define PLAYFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
+          uint8_t empty_playfield_bg[PLAYFIELD_SIZE];
 
           uint16_t i;
-          for (i = 0; i < PLAFIELD_SIZE; i++) {
+          for (i = 0; i < PLAYFIELD_SIZE; i++) {
             empty_playfield_bg[i] = BACKGROUND_EMPTY_TILE;
           }
 
@@ -653,6 +661,8 @@ GameStart:
             set_bkg_tiles(0, 0, 20, 18, background_data_snake);
             delay(flash_interval);
           }
+
+
           wait_until_pressed_debounced(J_START | J_A);
 
           goto GameStart;
