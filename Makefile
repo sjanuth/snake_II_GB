@@ -43,7 +43,7 @@ ASM_FONTS_SOURCES := $(wildcard $(FONTSDIR)/sm83/*.s)
 
 LCCFLAGS += -I$(FONTSINCLUDE) 
 
-all:	$(BINS) 
+all:	savefile.o $(BINS) 
 
 compile.bat: Makefile
 	@echo "REM Automatically generated from Makefile" > compile.bat
@@ -52,8 +52,12 @@ compile.bat: Makefile
 
 # Compile and link all source files in a single call to LCC
 #
+
+savefile.o: save/savefile.c
+	$(LCC)  -Wa-l -Wf-ba0 -c -o $@ $<
+
 $(BINS):	$(CSOURCES) $(ASMSOURCES) $(ASM_FONTS_SOURCES)
-	$(LCC) $(LCCFLAGS) -o $@ $(CSOURCES) $(ASMSOURCES) $(ASM_FONTS_SOURCES)
+	$(LCC) $(LCCFLAGS) -o $@ $(CSOURCES) $(ASMSOURCES) $(ASM_FONTS_SOURCES) savefile.o
 	
 # Compiles sprite assets in sprites directory
 $(SPRITESDIR)/%.o:	$(SPRITESDIR)/%.c
@@ -61,5 +65,5 @@ $(SPRITESDIR)/%.o:	$(SPRITESDIR)/%.c
 	$(LCC) $(LCCFLAGS) -o $@ $<
 
 clean:
-	rm -f *.o *.lst *.map *.gb *.ihx *.sym *.cdb *.adb *.asm *.noi *.rst $(SRC_DIR)/*.o
+	rm -f *.o *.lst *.map *.gb *.ihx *.sym *.cdb *.adb *.asm *.noi *.rst $(SRC_DIR)/*.o save/*.asm save/*.lst save/*.o save/*.sym
 
