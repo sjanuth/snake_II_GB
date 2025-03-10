@@ -685,6 +685,8 @@ GameStart:
               (snake.tail->y_pos == anticipated_next_pos.y))) {
 #define flash_interval ((1600 / 4) / 2)
 
+          clear_animal_related_stuff();
+
           if (score > top_score) {
             top_score = score;
             SaveTopScore(&top_score);
