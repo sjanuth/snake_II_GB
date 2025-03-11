@@ -12,8 +12,10 @@
 #include "snake_bckg.h"
 #include "snake_bckg_tileset.h"
 #include "splash_bg_asset.h"
+#include "level_1to9.h"
 #include "sprites/food.h"
 #include "savefile.h"
+#include "top_score_border.h"
 
 /* Definitions and globals variables */
 
@@ -49,22 +51,16 @@ const uint8_t distribution_required_food_for_animals[] = {5, 5, 5, 5, 5,
 
 extern snake_node_t node_pool[MAX_NODES] ;
 
-/*  Function declarations */
-uint8_t HasExistingSave();
-void LoadTopScore(uint16_t *top_score);
-void SaveTopScore(uint16_t *top_score);
-
-
 /* Function definitions */
 
 /**
- * @brief Check if stored data is available by checking 
+ * @brief Check if stored data is available by checking
  * to a predefined value SAVECHECK_VALUE
  */
-uint8_t HasExistingSave(){
+uint8_t HasExistingSave(void){
 
     uint8_t saveDataExists = 0;
-    
+
     ENABLE_RAM;
 
     saveDataExists = saved_check_flag == SAVECHECK_VALUE;
@@ -75,7 +71,7 @@ uint8_t HasExistingSave(){
 }
 
 /**
- * @brief Copy top score from the cartridge's FRAM/SRAM 
+ * @brief Copy top score from the cartridge's FRAM/SRAM
  * into the normal on-device RAM
  */
 void LoadTopScore(uint16_t *top_score){
@@ -85,7 +81,7 @@ void LoadTopScore(uint16_t *top_score){
 }
 
 /**
- * @brief Save current top score from RAM into FRAM/SRAM 
+ * @brief Save current top score from RAM into FRAM/SRAM
  */
 void SaveTopScore(uint16_t *top_score){
   ENABLE_RAM;
@@ -93,7 +89,8 @@ void SaveTopScore(uint16_t *top_score){
   top_score_save = *top_score;
   DISABLE_RAM;
 }
-void play_eating_sound() {
+
+void play_eating_sound(void) {
     NR52_REG = 0x80;  // Enable sound
     NR50_REG = 0x77;  // Set volume (max)
     NR51_REG  = 0x11;  // Enable sound on both channels
@@ -105,7 +102,7 @@ void play_eating_sound() {
     NR14_REG= 0x87;  // Start sound, enable length counter
 }
 
-void play_game_over_sound(){
+void play_game_over_sound(void){
 
     NR52_REG = 0x80;  // Enable sound
     NR50_REG = 0x77;  // Set volume (max)
@@ -240,7 +237,7 @@ void uint8_to_str_padded(char *buffer, uint8_t number, uint8_t width) {
   sprintf(buffer + i, "%d", number);
 }
 
-void render_steps() {
+void render_steps(void) {
   char str_steps[3];
   uint8_to_str_padded(str_steps, step_counter, 2);
   vwf_draw_text( STEP_POS_X  , STEP_POS_Y, 80, (unsigned char *)str_steps);
@@ -266,7 +263,7 @@ void wait_until_pressed_debounced(uint8_t mask) {
   }
 }
 
-void clear_animal_related_stuff(){
+void clear_animal_related_stuff(void){
 
           set_bkg_tile_xy( STEP_POS_X, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
           set_bkg_tile_xy( STEP_POS_X + 1, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
@@ -320,51 +317,49 @@ void main(void) {
   uint8_t food_counter;
   uint16_t score;
   uint16_t top_score = 0;
-  /*  TODO: Load from savestate */
-  uint8_t velocity = 4;
+  uint8_t velocity = 1;
   uint8_t has_food_in_mouth = 0;
   uint8_t has_animal_in_mouth = 0;
   uint8_t current_food_threshold;
   /* Bring up an animal after 5 meals (animals don't count here) */
 
+  /*  Apply default pallete 3-2-1-0 */
   DISPLAY_ON;
   SHOW_BKG;
   SHOW_SPRITES;
   SPRITES_8x8;
-
   /*  Load fonts */
 
   vwf_load_font(0, vwf_font, BANK(vwf_font));
-  vwf_activate_font(0);
   vwf_set_destination(VWF_RENDER_BKG);
-
-  set_bkg_data(0, splash_bg_asset_TILE_COUNT , splash_bg_asset_tiles);
 
   /* The gameboy screen is 160px wide by 144px tall
    * We deal with tiles that are 8px wide and 8px tall
    * 160/8 = 20 and 120/8=15 */
-#if 0
-  /* TODO: Can't show background with 255 tiles and render font at the same time */
-  set_bkg_tiles(0, 1, 20, 15, splash_bg_asset_map);
-#endif
+
+  set_bkg_data(level_1to9_TILE_ORIGIN, level_1to9_TILE_COUNT , level_1to9_tiles);
+  set_bkg_data(top_score_border_TILE_ORIGIN, top_score_border_TILE_COUNT , top_score_border_tiles);
+
+  /* Alter background palette because GIMP & PNG@ASSET does not give me the correct palette */
+  BGP_REG = 0b11000000;
+
+  vwf_draw_text(2, 5, 125,(unsigned char *) "LEVEL:");
+  set_bkg_tiles(2, 6, level_1to9_WIDTH / level_1to9_TILE_W, level_1to9_HEIGHT/level_1to9_TILE_H, level_1to9_map);
+  set_bkg_tiles(0, 0, top_score_border_WIDTH / top_score_border_TILE_W, top_score_border_HEIGHT / top_score_border_TILE_H, top_score_border_map);
 
   if (HasExistingSave()){
     LoadTopScore(&top_score);
-    char buffer[16];
-    sprintf(buffer, "TOP SCORE: %d", top_score);
-    vwf_draw_text(6, (144/8) - 2, 105, buffer);
-  }else{
-
-    vwf_draw_text(6, (144/8) - 2, 240, "NO SAVEGAME");
   }
 
-  /*  wait on splash screen until start button is pressed */
-#if 1
-  wait_until_pressed_debounced(J_START | J_A | J_B);
-#else
-  delay(1000);
-#endif
+  vwf_draw_text(10-4, 0, 105,(unsigned char *) "TOP SCORE");
+  char str_buffer[20];
+  int_to_str_padded(str_buffer, &top_score, 4);
+  vwf_draw_text(10-1, 1, 115,(unsigned char*) str_buffer);
 
+  wait_until_pressed_debounced(J_START | J_A | J_B);
+
+  /* Restore default palette for background */
+  BGP_REG = 0b11100100;
   initrand(DIV_REG); /* Seed with the Game Boy's divider register */
 
   /*  reload background tiles for main game */

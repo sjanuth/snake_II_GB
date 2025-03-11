@@ -6,6 +6,7 @@
 # to match your GBDK root directory (ex: GBDK_HOME = "C:/GBDK/"
 # IMPORTANT: Use absolute paths here, otherwise bear will fail to genereate
 # compile_commands.json required for clangd to work properly
+
 ifndef GBDK_HOME
 	GBDK_HOME = /home/sja/Programming/gbdk/
 endif
