@@ -356,7 +356,29 @@ void main(void) {
   int_to_str_padded(str_buffer, &top_score, 4);
   vwf_draw_text(10-1, 1, 115,(unsigned char*) str_buffer);
 
-  wait_until_pressed_debounced(J_START | J_A | J_B);
+  joypadPrevious = joypadCurrent;
+  joypadCurrent = joypad();
+  uint8_t start_game_mask = (J_START | J_A );
+  uint8_t incr_level_mask = (J_UP | J_RIGHT );
+  uint8_t decr_level_mask = (J_DOWN | J_LEFT );
+
+  while (!(joypadCurrent & start_game_mask)) {
+    if ((joypadCurrent & incr_level_mask) && !(joypadPrevious & incr_level_mask)){
+      velocity = ++velocity > 9 ? 9 : velocity;
+    }
+    else if ((joypadCurrent & decr_level_mask) && !(joypadPrevious & decr_level_mask)){
+
+      velocity = --velocity < 1 ? 1 : velocity;
+    }
+    /*  TODO: render level bars */
+
+    /*  get new input */
+    vsync();
+    joypadPrevious = joypadCurrent;
+    joypadCurrent = joypad();
+  }
+
+//  wait_until_pressed_debounced(J_START | J_A | J_B);
 
   /* Restore default palette for background */
   BGP_REG = 0b11100100;
