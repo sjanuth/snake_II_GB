@@ -52,6 +52,12 @@ uint8_t shown_animal_type;
 const uint8_t distribution_required_food_for_animals[] = {5, 5, 5, 5, 5,
                                                           5, 6, 6, 6, 7};
 
+const uint16_t velocity_rates_ms_per_step[] = { 500, 450, 400, 350, 300, 250, 200, 150, 100 };
+/*  The GB has a LCD refresh rate of 60fps -> 0.0166s
+ *  This lookup table contain  the counter values that must get reached to do a step */
+const uint8_t velocity_rates_counter_values[] = {30, 27, 24, 21, 18, 15, 12, 9, 6};
+
+
 extern snake_node_t node_pool[MAX_NODES];
 
 /* Function definitions */
@@ -374,7 +380,7 @@ LevelSelection:
   initrand(DIV_REG); /* Seed with the Game Boy's divider register */
 
   /*  reload background tiles for main game */
-  set_bkg_data(0, 51, snake_bckg_tileset);
+  set_bkg_data(0, 39 , snake_bckg_tileset);
 
 #define TILE_SIZE (16) /*  8x8 Bits and 2 bit color */
   set_sprite_data(FOOD_SPRITE, 1, food);
@@ -535,7 +541,7 @@ GameStart:
       }
     }
 
-    if (update_screen_counter % (GBP_FPS / velocity) == 0) {
+    if (update_screen_counter % (velocity_rates_counter_values[velocity - 1]) == 0) {
 
       if (animal_pos.x != FOOD_NOT_SET) {
         if (step_counter > 1) {
