@@ -76,19 +76,21 @@ uint8_t HasExistingSave(void) {
  * @brief Copy top score from the cartridge's FRAM/SRAM
  * into the normal on-device RAM
  */
-void LoadTopScore(uint16_t *top_score) {
+void LoadSavedData(uint16_t *top_score, uint8_t *velocity) {
   ENABLE_RAM;
   *top_score = top_score_save;
+  *velocity = velocity_save;
   DISABLE_RAM;
 }
 
 /**
  * @brief Save current top score from RAM into FRAM/SRAM
  */
-void SaveTopScore(uint16_t *top_score) {
+void SaveData(uint16_t *top_score, uint8_t *velocity) {
   ENABLE_RAM;
   saved_check_flag = SAVECHECK_VALUE;
   top_score_save = *top_score;
+  velocity_save = *velocity;
   DISABLE_RAM;
 }
 
@@ -268,6 +270,21 @@ void clear_animal_related_stuff(void) {
     break;
   }
 }
+void render_level_bars(uint8_t velocity){
+    uint8_t i, j;
+    const uint8_t level_bar_bottom = 15;
+    for (i = 2; i <= MAX_LEVEL; i++) {
+      if (i <= velocity) {
+        for (j = 0; j <= i; j++) {
+            set_bkg_tile_xy(((i * 2) - 1), level_bar_bottom - j, FULL_BAR_TILE_MAIN);
+        }
+      } else {
+        for (j = 0; j <= i + 1; j++) {
+          set_bkg_tile_xy(((i * 2) - 1), level_bar_bottom - j, EMPTY_TILE_MAIN);
+        }
+      }
+    }
+}
 
 void main(void) {
 
@@ -305,7 +322,11 @@ LevelSelection:
                 snake_main_site_map);
 
   if (HasExistingSave()) {
-    LoadTopScore(&top_score);
+    LoadSavedData(&top_score, &velocity);
+
+    /*  Sanitize velocity, just in case it got corrupted */
+    velocity = velocity > MAX_LEVEL ? MAX_LEVEL : velocity;
+    velocity = velocity < MIN_LEVEL ? MIN_LEVEL : velocity;
   }
 
   vwf_draw_text(2, 5, snake_main_site_TILE_COUNT + 1,
@@ -317,6 +338,7 @@ LevelSelection:
   vwf_draw_text(10 - 1, 1, snake_main_site_TILE_COUNT + 1 + 7 + 10,
                 (unsigned char *)str_buffer);
 
+  render_level_bars(velocity);
   joypadPrevious = joypadCurrent;
   joypadCurrent = joypad();
   uint8_t start_game_mask = (J_START | J_A);
@@ -332,25 +354,17 @@ LevelSelection:
       velocity = --velocity < MIN_LEVEL ? MIN_LEVEL : velocity;
     }
 
-    uint8_t i, j;
-    const uint8_t level_bar_bottom = 15;
-    for (i = 2; i <= MAX_LEVEL; i++) {
-      if (i <= velocity) {
-        for (j = 0; j <= i; j++) {
-            set_bkg_tile_xy(((i * 2) - 1), level_bar_bottom - j, FULL_BAR_TILE_MAIN);
-        }
-      } else {
-        for (j = 0; j <= i + 1; j++) {
-          set_bkg_tile_xy(((i * 2) - 1), level_bar_bottom - j, EMPTY_TILE_MAIN);
-        }
-      }
-    }
+    render_level_bars(velocity);
 
     /*  get new input */
     vsync();
     joypadPrevious = joypadCurrent;
     joypadCurrent = joypad();
   }
+
+  /*  Button to start game pressed */
+
+  SaveData(&top_score,  &velocity);
 
   //  wait_until_pressed_debounced(J_START | J_A | J_B);
 
@@ -682,7 +696,7 @@ GameStart:
 
           if (score > top_score) {
             top_score = score;
-            SaveTopScore(&top_score);
+            SaveData(&top_score, &velocity);
             vwf_draw_text(6, 1, 90, "NEW TOP SCORE");
           }
 

@@ -5,5 +5,6 @@
 #define SAVECHECK_VALUE (12345)
 extern uint16_t saved_check_flag;
 extern uint16_t top_score_save;
+extern uint8_t velocity_save;
 
 #endif
