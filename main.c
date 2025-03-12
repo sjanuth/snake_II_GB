@@ -60,7 +60,7 @@ extern snake_node_t node_pool[MAX_NODES];
  * @brief Check if stored data is available by checking
  * to a predefined value SAVECHECK_VALUE
  */
-uint8_t HasExistingSave(void) {
+static uint8_t HasExistingSave(void) {
 
   uint8_t saveDataExists = 0;
 
@@ -76,7 +76,7 @@ uint8_t HasExistingSave(void) {
  * @brief Copy top score from the cartridge's FRAM/SRAM
  * into the normal on-device RAM
  */
-void LoadSavedData(uint16_t *top_score, uint8_t *velocity) {
+static void LoadSavedData(uint16_t *top_score, uint8_t *velocity) {
   ENABLE_RAM;
   *top_score = top_score_save;
   *velocity = velocity_save;
@@ -86,7 +86,7 @@ void LoadSavedData(uint16_t *top_score, uint8_t *velocity) {
 /**
  * @brief Save current top score from RAM into FRAM/SRAM
  */
-void SaveData(uint16_t *top_score, uint8_t *velocity) {
+static void SaveData(uint16_t *top_score, uint8_t *velocity) {
   ENABLE_RAM;
   saved_check_flag = SAVECHECK_VALUE;
   top_score_save = *top_score;
@@ -99,7 +99,7 @@ void SaveData(uint16_t *top_score, uint8_t *velocity) {
  * @param *snake
  * @return random availble position
  * */
-pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
+static pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
 
   uint8_t x_upper_limit = is_for_animal ? PLAYFIELD_X_MAX - 1 : PLAYFIELD_X_MAX;
   uint8_t x, y;
@@ -160,7 +160,7 @@ pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
  * @param number Pointer to the number to be converted
  * @param width How long the zero padded number should be
  */
-void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
+static void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
   uint16_t temp = *number;
   uint8_t digits = 0;
 
@@ -180,7 +180,7 @@ void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
   sprintf(buffer + i, "%d", *number);
 }
 
-void uint8_to_str_padded(char *buffer, uint8_t number, uint8_t width) {
+static void uint8_to_str_padded(char *buffer, uint8_t number, uint8_t width) {
   uint16_t temp = number;
   uint8_t digits = 0;
 
@@ -200,23 +200,23 @@ void uint8_to_str_padded(char *buffer, uint8_t number, uint8_t width) {
   sprintf(buffer + i, "%d", number);
 }
 
-void render_steps(void) {
+inline void render_steps(void) {
   char str_steps[3];
   uint8_to_str_padded(str_steps, step_counter, 2);
   vwf_draw_text(STEP_POS_X, STEP_POS_Y, 80, (unsigned char *)str_steps);
 }
 
-void render_score(uint16_t *score) {
+static void render_score(uint16_t *score) {
   char str_score[5];
   int_to_str_padded(str_score, score, 4);
   vwf_draw_text(1, 1, 60, (unsigned char *)str_score);
 }
 
-uint8_t is_button_pressed_debounced(uint8_t mask) {
+static uint8_t is_button_pressed_debounced(uint8_t mask) {
   return (joypadCurrent & mask) && !(joypadPrevious & mask);
 }
 
-void wait_until_pressed_debounced(uint8_t mask) {
+static void wait_until_pressed_debounced(uint8_t mask) {
   joypadPrevious = joypadCurrent;
   joypadCurrent = joypad();
   while (!(joypadCurrent & mask) || (joypadPrevious & mask)) {
@@ -226,7 +226,7 @@ void wait_until_pressed_debounced(uint8_t mask) {
   }
 }
 
-void clear_animal_related_stuff(void) {
+static void clear_animal_related_stuff(void) {
 
   set_bkg_tile_xy(STEP_POS_X, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
   set_bkg_tile_xy(STEP_POS_X + 1, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
@@ -270,7 +270,8 @@ void clear_animal_related_stuff(void) {
     break;
   }
 }
-void render_level_bars(uint8_t velocity){
+
+static void render_level_bars(uint8_t velocity){
     uint8_t i, j;
     const uint8_t level_bar_bottom = 15;
     for (i = 2; i <= MAX_LEVEL; i++) {
@@ -497,13 +498,14 @@ GameStart:
       wait_vbl_done(); // Wait for VBlank before reading
       get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
 
-      /*  Just show Borders without score or snake */
+      /*  Just show borders without snake */
       set_bkg_tiles(0, 0, 20, 18, snake_bckg);
       vwf_draw_text(STARTPOS_X - 2, STARTPOS_Y, 70, "Paused");
       render_score(&score);
       vsync();
 
       wait_until_pressed_debounced(J_START);
+      /*  restore snake and give a small delay to the user until game continues */
       set_bkg_tiles(0, 0, 20, 18, background_data_snake);
       vsync();
       delay(400);
@@ -550,9 +552,11 @@ GameStart:
         }
       }
 
-      /*  Instead of moving and updating every node in the linked list,
-       *  we just insert a new node after the head and remove the node before
-       * the tail.*/
+      /*  
+       *  Instead of moving and updating every node in the linked list when
+       *  the snake moves forward, we just insert a new node after the head
+       *  and remove the node before the tail.
+       */
 
       snake_node_t *new_node = allocateNode();
       if (new_node) {
@@ -564,11 +568,13 @@ GameStart:
         new_node->prev_node = snake.head;
       }
 
-      /* find which snake body tile must get rendered */
+      /* 
+       * Find which snake tile must get rendered for the new inserted node
+       * Direction no next node is opposite to current moving direction
+       */
 
       direction_type dir_n = snake.head->dir_to_next_node;
 
-      /*  direction no next node is opposite to current moving direction */
 
       direction_type opposite_dir = OPPOSITE_DIRECTION(snake_direction);
       snake.head->dir_to_next_node = opposite_dir;
@@ -607,7 +613,7 @@ GameStart:
       }
 
       else {
-        /* normal without food eaten */
+        /* normal body tile without food eaten */
         if (snake_direction == UP && dir_n == DOWN) {
           new_node->tile_to_render = SNAKE_BODY_STRAIGHT_UP;
         } else if (snake_direction == RIGHT && dir_n == DOWN) {
@@ -641,12 +647,12 @@ GameStart:
         }
       }
 
-      /* inject new node */
+      /* Inject new node */
 
       snake.head->next_node->prev_node = new_node;
       snake.head->next_node = new_node;
 
-      /* update coordinates for the head */
+      /* Update coordinates for the head */
 
       pos_t anticipated_next_pos = {
           .x = snake.head->x_pos,

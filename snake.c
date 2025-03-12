@@ -1,8 +1,9 @@
 #include "snake.h"
 
-
-/*  Since the GB has very limited RAM, using heap will lead to fragmented
- * memory. Thus, we use a memory pool for nodes */
+/**  
+ * Since the GB has very limited RAM, using heap will lead to fragmented
+ * memory. Thus, we use a memory pool for nodes 
+ */
 snake_node_t node_pool[MAX_NODES] ;
 
 /**
