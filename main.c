@@ -11,11 +11,9 @@
 #include "snake.h"
 #include "snake_bckg.h"
 #include "snake_bckg_tileset.h"
-#include "splash_bg_asset.h"
-#include "level_1to9.h"
 #include "sprites/food.h"
 #include "savefile.h"
-#include "top_score_border.h"
+#include "snake_main_site.h"
 
 /* Definitions and globals variables */
 
@@ -25,6 +23,9 @@
 #define PLAYFIELD_TO_GLOBAL_X_POS(X) (X + 1) /* border */
 #define PLAYFIELD_TO_GLOBAL_Y_POS(Y)                                           \
   (Y + PLAYFIELD_Y_OFFSET) /* borders + 2 for score */
+
+#define MAX_LEVEL (9)
+#define MIN_LEVEL (1)
 
 /*  The playfield has the coordinates
  *  x = [0 -17]
@@ -127,7 +128,6 @@ void play_game_over_sound(void){
     NR12_REG= 0xFF;  // Envelope: Max volume, short decay
     NR13_REG= 0x61;  // Frequency (higher values = lower pitch)
     NR14_REG= 0x85;  // Start sound, enable length counter
-
 }
 /**
  * Get random position to place food on playfield
@@ -318,9 +318,8 @@ void main(void) {
   uint16_t score;
   uint16_t top_score = 0;
   uint8_t velocity = 1;
-  uint8_t has_food_in_mouth = 0;
-  uint8_t has_animal_in_mouth = 0;
-  uint8_t current_food_threshold;
+  uint8_t has_food_in_mouth;
+  uint8_t has_animal_in_mouth;
   /* Bring up an animal after 5 meals (animals don't count here) */
 
   /*  Apply default pallete 3-2-1-0 */
@@ -333,28 +332,23 @@ void main(void) {
   vwf_load_font(0, vwf_font, BANK(vwf_font));
   vwf_set_destination(VWF_RENDER_BKG);
 
-  /* The gameboy screen is 160px wide by 144px tall
-   * We deal with tiles that are 8px wide and 8px tall
-   * 160/8 = 20 and 120/8=15 */
-
-  set_bkg_data(level_1to9_TILE_ORIGIN, level_1to9_TILE_COUNT , level_1to9_tiles);
-  set_bkg_data(top_score_border_TILE_ORIGIN, top_score_border_TILE_COUNT , top_score_border_tiles);
+LevelSelection:
+  set_bkg_data(snake_main_site_TILE_ORIGIN, snake_main_site_TILE_COUNT , snake_main_site_tiles);
 
   /* Alter background palette because GIMP & PNG@ASSET does not give me the correct palette */
   BGP_REG = 0b11000000;
 
-  vwf_draw_text(2, 5, 125,(unsigned char *) "LEVEL:");
-  set_bkg_tiles(2, 6, level_1to9_WIDTH / level_1to9_TILE_W, level_1to9_HEIGHT/level_1to9_TILE_H, level_1to9_map);
-  set_bkg_tiles(0, 0, top_score_border_WIDTH / top_score_border_TILE_W, top_score_border_HEIGHT / top_score_border_TILE_H, top_score_border_map);
+  set_bkg_tiles(0, 0, snake_main_site_WIDTH / snake_main_site_TILE_W, snake_main_site_HEIGHT / snake_main_site_TILE_H, snake_main_site_map);
 
   if (HasExistingSave()){
     LoadTopScore(&top_score);
   }
 
-  vwf_draw_text(10-4, 0, 105,(unsigned char *) "TOP SCORE");
+  vwf_draw_text(2, 5, snake_main_site_TILE_COUNT + 1,(unsigned char *) "LEVEL:");
+  vwf_draw_text(10-4, 0, snake_main_site_TILE_COUNT + 1 + 7,(unsigned char *) "TOP SCORE");
   char str_buffer[20];
   int_to_str_padded(str_buffer, &top_score, 4);
-  vwf_draw_text(10-1, 1, 115,(unsigned char*) str_buffer);
+  vwf_draw_text(10-1, 1, snake_main_site_TILE_COUNT + 1 + 7 + 10,(unsigned char*) str_buffer);
 
   joypadPrevious = joypadCurrent;
   joypadCurrent = joypad();
@@ -364,13 +358,31 @@ void main(void) {
 
   while (!(joypadCurrent & start_game_mask)) {
     if ((joypadCurrent & incr_level_mask) && !(joypadPrevious & incr_level_mask)){
-      velocity = ++velocity > 9 ? 9 : velocity;
+      velocity = ++velocity > MAX_LEVEL ? MAX_LEVEL : velocity;
     }
     else if ((joypadCurrent & decr_level_mask) && !(joypadPrevious & decr_level_mask)){
-
-      velocity = --velocity < 1 ? 1 : velocity;
+      velocity = --velocity < MIN_LEVEL ? MIN_LEVEL : velocity;
     }
+
     /*  TODO: render level bars */
+
+    uint8_t i;
+    for(i = 2; i <= MAX_LEVEL; i++){
+
+      /* TODO:another for loop to iterate over level height (y axis) */
+      if (i <= velocity){
+        // TODO: get correct tiles and adjust bar alignment
+        set_bkg_tile_xy(2 + ((i * 2) -1) , 18 - 3, 45);
+        set_bkg_tile_xy(2 + (i * 2)  , 18 - 3, 48);
+      }else{
+        set_bkg_tile_xy(2 + ((i * 2) -1) , 18 - 3, 49);
+        set_bkg_tile_xy(2 + (i * 2)  , 18 - 3, 50);
+      }
+    }
+    /* OOOXYXYXY
+     * 012345678
+     *
+     */
 
     /*  get new input */
     vsync();
@@ -399,7 +411,9 @@ void main(void) {
 
 GameStart:
 
-  current_food_threshold = distribution_required_food_for_animals[rand() % 10];
+  has_animal_in_mouth = 0;
+  has_food_in_mouth = 0;
+  uint8_t current_food_threshold = distribution_required_food_for_animals[rand() % 10];
   animal_pos.x = FOOD_NOT_SET;
   animal_pos.y = FOOD_NOT_SET;
   clear_animal_related_stuff();
@@ -717,7 +731,6 @@ GameStart:
           play_game_over_sound();
 #define PLAYFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
           uint8_t empty_playfield_bg[PLAYFIELD_SIZE];
-
           uint16_t i;
           for (i = 0; i < PLAYFIELD_SIZE; i++) {
             empty_playfield_bg[i] = BACKGROUND_EMPTY_TILE;
@@ -735,14 +748,16 @@ GameStart:
           }
 
 
-          wait_until_pressed_debounced(J_START | J_A);
-
-          goto GameStart;
+          wait_until_pressed_debounced(J_START | J_A | J_B);
+          if (joypadCurrent & (J_START | J_A)){
+            goto GameStart;
+          }
+          else{
+            move_sprite(FOOD_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
+            goto LevelSelection;
+          }
         }
       }
-
-      // set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos,
-      // BACKGROUND_EMPTY_TILE);
 
       snake.head->y_pos = anticipated_next_pos.y;
       snake.head->x_pos = anticipated_next_pos.x;
