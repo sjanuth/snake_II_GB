@@ -1,0 +1,6 @@
+*.o
+*.lst
+*.sym
+*.gb
+.cache/
+*.xcf

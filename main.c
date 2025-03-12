@@ -1,19 +1,20 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <rand.h>
-#include "gb/gb.h"
-#include "gb/hardware.h"
-#include "vwf.h"
-#include "vwf_font.h"
 #include "animals.h"
 #include "animals_tiles.h"
+#include "gb/gb.h"
+#include "gb/hardware.h"
 #include "main.h"
+#include "savefile.h"
 #include "snake.h"
 #include "snake_bckg.h"
 #include "snake_bckg_tileset.h"
-#include "sprites/food.h"
-#include "savefile.h"
 #include "snake_main_site.h"
+#include "sound.h"
+#include "sprites/food.h"
+#include "vwf.h"
+#include "vwf_font.h"
+#include <rand.h>
+#include <stdint.h>
+#include <stdio.h>
 
 /* Definitions and globals variables */
 
@@ -29,7 +30,8 @@
 
 /*  The playfield has the coordinates
  *  x = [0 -17]
- *  y = [0- 12]*/
+ *  y = [0- 12]
+ */
 #define PLAYFIELD_X_MAX (17)
 #define PLAYFIELD_Y_MAX (12)
 #define GBP_FPS 60
@@ -50,7 +52,7 @@ uint8_t shown_animal_type;
 const uint8_t distribution_required_food_for_animals[] = {5, 5, 5, 5, 5,
                                                           5, 6, 6, 6, 7};
 
-extern snake_node_t node_pool[MAX_NODES] ;
+extern snake_node_t node_pool[MAX_NODES];
 
 /* Function definitions */
 
@@ -58,24 +60,23 @@ extern snake_node_t node_pool[MAX_NODES] ;
  * @brief Check if stored data is available by checking
  * to a predefined value SAVECHECK_VALUE
  */
-uint8_t HasExistingSave(void){
+uint8_t HasExistingSave(void) {
 
-    uint8_t saveDataExists = 0;
+  uint8_t saveDataExists = 0;
 
-    ENABLE_RAM;
+  ENABLE_RAM;
 
-    saveDataExists = saved_check_flag == SAVECHECK_VALUE;
+  saveDataExists = saved_check_flag == SAVECHECK_VALUE;
 
-    DISABLE_RAM;
-    return saveDataExists;
-
+  DISABLE_RAM;
+  return saveDataExists;
 }
 
 /**
  * @brief Copy top score from the cartridge's FRAM/SRAM
  * into the normal on-device RAM
  */
-void LoadTopScore(uint16_t *top_score){
+void LoadTopScore(uint16_t *top_score) {
   ENABLE_RAM;
   *top_score = top_score_save;
   DISABLE_RAM;
@@ -84,51 +85,13 @@ void LoadTopScore(uint16_t *top_score){
 /**
  * @brief Save current top score from RAM into FRAM/SRAM
  */
-void SaveTopScore(uint16_t *top_score){
+void SaveTopScore(uint16_t *top_score) {
   ENABLE_RAM;
   saved_check_flag = SAVECHECK_VALUE;
   top_score_save = *top_score;
   DISABLE_RAM;
 }
 
-void play_eating_sound(void) {
-    NR52_REG = 0x80;  // Enable sound
-    NR50_REG = 0x77;  // Set volume (max)
-    NR51_REG  = 0x11;  // Enable sound on both channels
-
-    NR10_REG= 0x16;  // Sweep settings (increase pitch)
-    NR11_REG= 0x3F;  // Duty cycle 50% (square wave)
-    NR12_REG= 0xD0;  // Envelope: Max volume, short decay
-    NR13_REG= 0x90;  // Frequency (higher values = lower pitch)
-    NR14_REG= 0x87;  // Start sound, enable length counter
-}
-
-void play_game_over_sound(void){
-
-    NR52_REG = 0x80;  // Enable sound
-    NR50_REG = 0x77;  // Set volume (max)
-    NR51_REG  = 0x11;  // Enable sound on both channels
-
-    NR10_REG= 0x32;  // Sweep settings (increase pitch)
-    NR11_REG= 0xBF;  // Duty cycle 50% (square wave)
-    NR12_REG= 0xFF;  // Envelope: Max volume, short decay
-    NR13_REG= 0x61;  // Frequency (higher values = lower pitch)
-    NR14_REG= 0x85;  // Start sound, enable length counter
-    delay(12);
-    NR52_REG = 0x80;  // Enable sound
-    NR10_REG= 0x32;  // Sweep settings (increase pitch)
-    NR11_REG= 0xBF;  // Duty cycle 50% (square wave)
-    NR12_REG= 0xFF;  // Envelope: Max volume, short decay
-    NR13_REG= 0x61;  // Frequency (higher values = lower pitch)
-    NR14_REG= 0x85;  // Start sound, enable length counter
-    delay(20);
-    NR52_REG = 0x80;  // Enable sound
-    NR10_REG= 0x32;  // Sweep settings (increase pitch)
-    NR11_REG= 0xBF;  // Duty cycle 50% (square wave)
-    NR12_REG= 0xFF;  // Envelope: Max volume, short decay
-    NR13_REG= 0x61;  // Frequency (higher values = lower pitch)
-    NR14_REG= 0x85;  // Start sound, enable length counter
-}
 /**
  * Get random position to place food on playfield
  * @param *snake
@@ -187,7 +150,6 @@ pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal) {
   return result;
 }
 
-
 /**
  * Because sprintf does not support padding with %0xd in GBDK,
  * we have to do the zero padding ourselves
@@ -216,7 +178,6 @@ void int_to_str_padded(char *buffer, uint16_t *number, uint8_t width) {
   sprintf(buffer + i, "%d", *number);
 }
 
-
 void uint8_to_str_padded(char *buffer, uint8_t number, uint8_t width) {
   uint16_t temp = number;
   uint8_t digits = 0;
@@ -240,7 +201,7 @@ void uint8_to_str_padded(char *buffer, uint8_t number, uint8_t width) {
 void render_steps(void) {
   char str_steps[3];
   uint8_to_str_padded(str_steps, step_counter, 2);
-  vwf_draw_text( STEP_POS_X  , STEP_POS_Y, 80, (unsigned char *)str_steps);
+  vwf_draw_text(STEP_POS_X, STEP_POS_Y, 80, (unsigned char *)str_steps);
 }
 
 void render_score(uint16_t *score) {
@@ -263,50 +224,49 @@ void wait_until_pressed_debounced(uint8_t mask) {
   }
 }
 
-void clear_animal_related_stuff(void){
+void clear_animal_related_stuff(void) {
 
-          set_bkg_tile_xy( STEP_POS_X, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
-          set_bkg_tile_xy( STEP_POS_X + 1, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
+  set_bkg_tile_xy(STEP_POS_X, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
+  set_bkg_tile_xy(STEP_POS_X + 1, STEP_POS_Y, BACKGROUND_EMPTY_TILE);
 
-
-          switch (shown_animal_type) {
-          case 0:
-            move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0,
-                               SPIDER_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
-            move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0, 13,
-                               FOOD_NOT_SET, FOOD_NOT_SET);
-            break;
-          case 1:
-            move_metasprite_ex(animal_mouse_metasprite, MOUSE_SPRITE, 0,
-                               MOUSE_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
-            move_metasprite_ex(animal_mouse_metasprite, MOUSE_SPRITE, 0, 15,
-                               FOOD_NOT_SET, FOOD_NOT_SET);
-            break;
-          case 2:
-            move_metasprite_ex(animal_fish_metasprite, FISH_SPRITE, 0,
-                               FISH_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
-            move_metasprite_ex(animal_fish_metasprite, FISH_SPRITE, 0, 17,
-                               FOOD_NOT_SET, FOOD_NOT_SET);
-            break;
-          case 3:
-            move_metasprite_ex(animal_bug_metasprite, BUG_SPRITE, 0, BUG_SPRITE,
-                               FOOD_NOT_SET, FOOD_NOT_SET);
-            move_metasprite_ex(animal_bug_metasprite, BUG_SPRITE, 0, 19,
-                               FOOD_NOT_SET, FOOD_NOT_SET);
-            break;
-          case 4:
-            move_metasprite_ex(animal_turtle_metasprite, TURTLE_SPRITE, 0,
-                               TURTLE_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
-            move_metasprite_ex(animal_turtle_metasprite, TURTLE_SPRITE, 0, 21,
-                               FOOD_NOT_SET, FOOD_NOT_SET);
-            break;
-          case 5:
-            move_metasprite_ex(animal_ant_metasprite, ANT_SPRITE, 0, ANT_SPRITE,
-                               FOOD_NOT_SET, FOOD_NOT_SET);
-            move_metasprite_ex(animal_ant_metasprite, ANT_SPRITE, 0, 21,
-                               FOOD_NOT_SET, FOOD_NOT_SET);
-            break;
-          }
+  switch (shown_animal_type) {
+  case 0:
+    move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0,
+                       SPIDER_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
+    move_metasprite_ex(animal_spider_metasprite, SPIDER_SPRITE, 0, 13,
+                       FOOD_NOT_SET, FOOD_NOT_SET);
+    break;
+  case 1:
+    move_metasprite_ex(animal_mouse_metasprite, MOUSE_SPRITE, 0, MOUSE_SPRITE,
+                       FOOD_NOT_SET, FOOD_NOT_SET);
+    move_metasprite_ex(animal_mouse_metasprite, MOUSE_SPRITE, 0, 15,
+                       FOOD_NOT_SET, FOOD_NOT_SET);
+    break;
+  case 2:
+    move_metasprite_ex(animal_fish_metasprite, FISH_SPRITE, 0, FISH_SPRITE,
+                       FOOD_NOT_SET, FOOD_NOT_SET);
+    move_metasprite_ex(animal_fish_metasprite, FISH_SPRITE, 0, 17, FOOD_NOT_SET,
+                       FOOD_NOT_SET);
+    break;
+  case 3:
+    move_metasprite_ex(animal_bug_metasprite, BUG_SPRITE, 0, BUG_SPRITE,
+                       FOOD_NOT_SET, FOOD_NOT_SET);
+    move_metasprite_ex(animal_bug_metasprite, BUG_SPRITE, 0, 19, FOOD_NOT_SET,
+                       FOOD_NOT_SET);
+    break;
+  case 4:
+    move_metasprite_ex(animal_turtle_metasprite, TURTLE_SPRITE, 0,
+                       TURTLE_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
+    move_metasprite_ex(animal_turtle_metasprite, TURTLE_SPRITE, 0, 21,
+                       FOOD_NOT_SET, FOOD_NOT_SET);
+    break;
+  case 5:
+    move_metasprite_ex(animal_ant_metasprite, ANT_SPRITE, 0, ANT_SPRITE,
+                       FOOD_NOT_SET, FOOD_NOT_SET);
+    move_metasprite_ex(animal_ant_metasprite, ANT_SPRITE, 0, 21, FOOD_NOT_SET,
+                       FOOD_NOT_SET);
+    break;
+  }
 }
 
 void main(void) {
@@ -333,56 +293,58 @@ void main(void) {
   vwf_set_destination(VWF_RENDER_BKG);
 
 LevelSelection:
-  set_bkg_data(snake_main_site_TILE_ORIGIN, snake_main_site_TILE_COUNT , snake_main_site_tiles);
+  set_bkg_data(snake_main_site_TILE_ORIGIN, snake_main_site_TILE_COUNT,
+               snake_main_site_tiles);
 
-  /* Alter background palette because GIMP & PNG@ASSET does not give me the correct palette */
+  /* Alter background palette because GIMP & PNG@ASSET does not give me the
+   * correct palette */
   BGP_REG = 0b11000000;
 
-  set_bkg_tiles(0, 0, snake_main_site_WIDTH / snake_main_site_TILE_W, snake_main_site_HEIGHT / snake_main_site_TILE_H, snake_main_site_map);
+  set_bkg_tiles(0, 0, snake_main_site_WIDTH / snake_main_site_TILE_W,
+                snake_main_site_HEIGHT / snake_main_site_TILE_H,
+                snake_main_site_map);
 
-  if (HasExistingSave()){
+  if (HasExistingSave()) {
     LoadTopScore(&top_score);
   }
 
-  vwf_draw_text(2, 5, snake_main_site_TILE_COUNT + 1,(unsigned char *) "LEVEL:");
-  vwf_draw_text(10-4, 0, snake_main_site_TILE_COUNT + 1 + 7,(unsigned char *) "TOP SCORE");
+  vwf_draw_text(2, 5, snake_main_site_TILE_COUNT + 1,
+                (unsigned char *)"LEVEL:");
+  vwf_draw_text(10 - 4, 0, snake_main_site_TILE_COUNT + 1 + 7,
+                (unsigned char *)"TOP SCORE");
   char str_buffer[20];
   int_to_str_padded(str_buffer, &top_score, 4);
-  vwf_draw_text(10-1, 1, snake_main_site_TILE_COUNT + 1 + 7 + 10,(unsigned char*) str_buffer);
+  vwf_draw_text(10 - 1, 1, snake_main_site_TILE_COUNT + 1 + 7 + 10,
+                (unsigned char *)str_buffer);
 
   joypadPrevious = joypadCurrent;
   joypadCurrent = joypad();
-  uint8_t start_game_mask = (J_START | J_A );
-  uint8_t incr_level_mask = (J_UP | J_RIGHT );
-  uint8_t decr_level_mask = (J_DOWN | J_LEFT );
+  uint8_t start_game_mask = (J_START | J_A);
+  uint8_t incr_level_mask = (J_UP | J_RIGHT);
+  uint8_t decr_level_mask = (J_DOWN | J_LEFT);
 
   while (!(joypadCurrent & start_game_mask)) {
-    if ((joypadCurrent & incr_level_mask) && !(joypadPrevious & incr_level_mask)){
+    if ((joypadCurrent & incr_level_mask) &&
+        !(joypadPrevious & incr_level_mask)) {
       velocity = ++velocity > MAX_LEVEL ? MAX_LEVEL : velocity;
-    }
-    else if ((joypadCurrent & decr_level_mask) && !(joypadPrevious & decr_level_mask)){
+    } else if ((joypadCurrent & decr_level_mask) &&
+               !(joypadPrevious & decr_level_mask)) {
       velocity = --velocity < MIN_LEVEL ? MIN_LEVEL : velocity;
     }
 
-    /*  TODO: render level bars */
-
-    uint8_t i;
-    for(i = 2; i <= MAX_LEVEL; i++){
-
-      /* TODO:another for loop to iterate over level height (y axis) */
-      if (i <= velocity){
-        // TODO: get correct tiles and adjust bar alignment
-        set_bkg_tile_xy(2 + ((i * 2) -1) , 18 - 3, 45);
-        set_bkg_tile_xy(2 + (i * 2)  , 18 - 3, 48);
-      }else{
-        set_bkg_tile_xy(2 + ((i * 2) -1) , 18 - 3, 49);
-        set_bkg_tile_xy(2 + (i * 2)  , 18 - 3, 50);
+    uint8_t i, j;
+    const uint8_t level_bar_bottom = 15;
+    for (i = 2; i <= MAX_LEVEL; i++) {
+      if (i <= velocity) {
+        for (j = 0; j <= i; j++) {
+            set_bkg_tile_xy(((i * 2) - 1), level_bar_bottom - j, FULL_BAR_TILE_MAIN);
+        }
+      } else {
+        for (j = 0; j <= i + 1; j++) {
+          set_bkg_tile_xy(((i * 2) - 1), level_bar_bottom - j, EMPTY_TILE_MAIN);
+        }
       }
     }
-    /* OOOXYXYXY
-     * 012345678
-     *
-     */
 
     /*  get new input */
     vsync();
@@ -390,7 +352,7 @@ LevelSelection:
     joypadCurrent = joypad();
   }
 
-//  wait_until_pressed_debounced(J_START | J_A | J_B);
+  //  wait_until_pressed_debounced(J_START | J_A | J_B);
 
   /* Restore default palette for background */
   BGP_REG = 0b11100100;
@@ -405,15 +367,16 @@ LevelSelection:
   set_sprite_data(MOUSE_SPRITE, 2, &animals_tiles[ANIMAL_MOUSE_1 * TILE_SIZE]);
   set_sprite_data(FISH_SPRITE, 2, &animals_tiles[ANIMAL_FISH_1 * TILE_SIZE]);
   set_sprite_data(BUG_SPRITE, 2, &animals_tiles[ANIMAL_BUG_1 * TILE_SIZE]);
-  set_sprite_data(TURTLE_SPRITE, 2, &animals_tiles[ANIMAL_TURTLE_1 * TILE_SIZE]);
+  set_sprite_data(TURTLE_SPRITE, 2,
+                  &animals_tiles[ANIMAL_TURTLE_1 * TILE_SIZE]);
   set_sprite_data(ANT_SPRITE, 2, &animals_tiles[ANIMAL_ANT_1 * TILE_SIZE]);
-
 
 GameStart:
 
   has_animal_in_mouth = 0;
   has_food_in_mouth = 0;
-  uint8_t current_food_threshold = distribution_required_food_for_animals[rand() % 10];
+  uint8_t current_food_threshold =
+      distribution_required_food_for_animals[rand() % 10];
   animal_pos.x = FOOD_NOT_SET;
   animal_pos.y = FOOD_NOT_SET;
   clear_animal_related_stuff();
@@ -570,7 +533,6 @@ GameStart:
 
           /*  clear step score */
           clear_animal_related_stuff();
-
         }
       }
 
@@ -747,12 +709,10 @@ GameStart:
             delay(flash_interval);
           }
 
-
           wait_until_pressed_debounced(J_START | J_A | J_B);
-          if (joypadCurrent & (J_START | J_A)){
+          if (joypadCurrent & (J_START | J_A)) {
             goto GameStart;
-          }
-          else{
+          } else {
             move_sprite(FOOD_SPRITE, FOOD_NOT_SET, FOOD_NOT_SET);
             goto LevelSelection;
           }
@@ -765,7 +725,8 @@ GameStart:
       /*  Update tail and remove node before tail */
 
       if (!has_food_in_mouth) {
-        set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos, BACKGROUND_EMPTY_TILE);
+        set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
+                        BACKGROUND_EMPTY_TILE);
         snake_node_t *second_last_node = snake.tail->prev_node;
         snake.tail->x_pos = second_last_node->x_pos;
         snake.tail->y_pos = second_last_node->y_pos;
@@ -795,7 +756,8 @@ GameStart:
           /*  Time to show an animal */
           step_counter = 20;
 
-          current_food_threshold = distribution_required_food_for_animals[rand() % 10];
+          current_food_threshold =
+              distribution_required_food_for_animals[rand() % 10];
           food_counter = 0;
 
           /*  Draw a random position to place the animal */
@@ -857,9 +819,12 @@ GameStart:
                     (uint8_t)PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
 
         play_eating_sound();
-      }
-      else if(checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x), PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) ||
-          checkPointForCollision(&snake, PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1), PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) ){
+      } else if (checkPointForCollision(
+                     &snake, PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x),
+                     PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) ||
+                 checkPointForCollision(
+                     &snake, PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1),
+                     PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y))) {
 
         animal_pos.x = FOOD_NOT_SET;
         animal_pos.y = FOOD_NOT_SET;
@@ -868,10 +833,10 @@ GameStart:
         render_score(&score);
 
         play_eating_sound();
-        /*  a different flag to show the correct tile, but when eating an animal, the snake should not grow */
+        /*  a different flag to show the correct tile, but when eating an
+         * animal, the snake should not grow */
         has_animal_in_mouth = 1;
-      }
-      else {
+      } else {
         has_food_in_mouth = 0;
         has_animal_in_mouth = 0;
       }
@@ -978,7 +943,7 @@ GameStart:
         }
         break;
       case DOWN:
-        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) && 
+        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) &&
             snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
           break;
         };
@@ -986,7 +951,8 @@ GameStart:
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
-        else if (PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y) == PLAYFIELD_Y_OFFSET) {
+        else if (PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y) ==
+                 PLAYFIELD_Y_OFFSET) {
           if (snake_head->y_pos + 1 > PLAYFIELD_BOTTOM) {
             food_lies_ahead = 1;
           }
@@ -996,11 +962,13 @@ GameStart:
         if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
           break;
         };
-        if (snake_head->x_pos - 1 == PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
+        if (snake_head->x_pos - 1 ==
+            PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
-        else if (PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1) == PLAYFIELD_WIDTH) {
+        else if (PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1) ==
+                 PLAYFIELD_WIDTH) {
           if (snake_head->x_pos - 1 < 1) {
             food_lies_ahead = 1;
           }

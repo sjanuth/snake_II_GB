@@ -12,6 +12,9 @@
 #define PLAYFIELD_WIDTH ((160 / 8) - 1 - 1)
 #define MAX_NODES (PLAYFIELD_WIDTH * PLAYFIELD_HEIGHT)
 
+#define EMPTY_TILE_MAIN (0)
+#define FULL_BAR_TILE_MAIN (39)
+
 typedef enum {
   UP,
   RIGHT,
