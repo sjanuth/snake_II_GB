@@ -1,4 +1,3 @@
-#include <gb/gb.h>
 #include <stdint.h>
 
 uint16_t saved_check_flag;
