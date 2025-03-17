@@ -4,3 +4,7 @@
 *.gb
 .cache/
 *.xcf
+compile_commands.json
+config.json
+make_update_compile_commands.sh
+savefile.asm

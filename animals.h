@@ -1,6 +1,5 @@
 #ifndef _animals_h
 #define _animals_h
-#include "main.h"
 #include <gb/gb.h>
 #include <gb/metasprites.h>
 
