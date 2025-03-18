@@ -704,6 +704,7 @@ GameStart:
               (snake.tail->y_pos == anticipated_next_pos.y))) {
 #define flash_interval ((1600 / 4) / 2)
 
+GameOver: 
           clear_animal_related_stuff();
 
           if (score > top_score) {
@@ -838,7 +839,7 @@ GameStart:
         food_pos = get_random_free_food_position(&snake, 0);
 
         if (food_pos.x == NO_FREE_FIELDS_AVAILABLE) {
-          // TODO: What should we do in this case? Is the game won?
+          goto GameOver;
         }
 
         move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x),
