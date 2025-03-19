@@ -467,7 +467,6 @@ GameStart:
   snake_second_node->next_node = snake_tail;
 
   snake_t snake = {
-      .length = 4,
       .head = snake_head,
       .tail = snake_tail,
   };

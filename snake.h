@@ -18,7 +18,6 @@ typedef struct snake_node_s {
 typedef struct snake_s {
   snake_node_t *head;
   snake_node_t *tail;
-  uint8_t length;
 } snake_t;
 
 snake_node_t *allocateNode(void) ;
