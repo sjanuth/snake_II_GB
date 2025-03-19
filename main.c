@@ -18,6 +18,9 @@
 
 /* Definitions and globals variables */
 
+#define TILE_SIZE (16) /*  8x8 Bits and 2 bit color */
+#define FLASH_INTERVAL ((1600 / 4) / 2)
+#define NB_OF_DIFFERENT_ANIMALS 6
 #define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
 #define PLAYFIELD_TO_SPRITE_X_POS(X) ((X * 8) + 16)
 #define PLAYFIELD_TO_SPRITE_Y_POS(Y) ((4 * 8) + 16 + (8 * Y))
@@ -34,6 +37,7 @@
  */
 #define PLAYFIELD_X_MAX (17)
 #define PLAYFIELD_Y_MAX (12)
+#define PLAYFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
 #define GBP_FPS 60
 #define STARTPOS_X ((160 / 8) / 2)
 #define STARTPOS_Y ((144 / 8) / 2)
@@ -144,6 +148,7 @@ static pos_t get_random_free_food_position(snake_t *snake, uint8_t is_for_animal
       if (animal_pos.x != FOOD_NOT_SET &&
           ((animal_pos.x == x && animal_pos.y == y) ||
            (animal_pos.x + 1 == x && animal_pos.y == y)))
+        /*  animal is two tiles wide */
         continue;
       if (!checkPointForCollision(snake, PLAYFIELD_TO_GLOBAL_X_POS(x),
                                   PLAYFIELD_TO_GLOBAL_Y_POS(y))) {
@@ -382,7 +387,6 @@ LevelSelection:
   /*  reload background tiles for main game */
   set_bkg_data(0, 39 , snake_bckg_tileset);
 
-#define TILE_SIZE (16) /*  8x8 Bits and 2 bit color */
   set_sprite_data(FOOD_SPRITE, 1, food);
   set_sprite_data(SPIDER_SPRITE, 2, &animals_tiles[0]);
   set_sprite_data(MOUSE_SPRITE, 2, &animals_tiles[ANIMAL_MOUSE_1 * TILE_SIZE]);
@@ -480,6 +484,9 @@ GameStart:
   /*  randomly place food on a free spot */
 
   food_pos = get_random_free_food_position(&snake, 0);
+  if (food_pos.x == NO_FREE_FIELDS_AVAILABLE){
+    goto GameOver;
+  }
   move_sprite(FOOD_SPRITE, (uint8_t)PLAYFIELD_TO_SPRITE_X_POS(food_pos.x),
               (uint8_t)PLAYFIELD_TO_SPRITE_Y_POS(food_pos.y));
 
@@ -544,6 +551,7 @@ GameStart:
     if (update_screen_counter % (velocity_rates_counter_values[velocity - 1]) == 0) {
 
       if (animal_pos.x != FOOD_NOT_SET) {
+        /*  Animal is currently shown on screen */
         if (step_counter > 1) {
           step_counter--;
           render_steps();
@@ -702,7 +710,6 @@ GameStart:
 
         if (!((snake.tail->x_pos == anticipated_next_pos.x) &&
               (snake.tail->y_pos == anticipated_next_pos.y))) {
-#define flash_interval ((1600 / 4) / 2)
 
 GameOver: 
           clear_animal_related_stuff();
@@ -718,7 +725,6 @@ GameOver:
           get_bkg_tiles(0, 0, 20, 18, &background_data_snake[0]);
 
           play_game_over_sound();
-#define PLAYFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
           uint8_t empty_playfield_bg[PLAYFIELD_SIZE];
           uint16_t i;
           for (i = 0; i < PLAYFIELD_SIZE; i++) {
@@ -729,11 +735,11 @@ GameOver:
             /*  Clear snake from screen, just show borders */
             set_bkg_tiles(1, PLAYFIELD_Y_OFFSET, PLAYFIELD_X_MAX + 1,
                           PLAYFIELD_Y_MAX + 1, empty_playfield_bg);
-            delay(flash_interval);
+            delay(FLASH_INTERVAL);
 
             /* show snake on background */
             set_bkg_tiles(0, 0, 20, 18, background_data_snake);
-            delay(flash_interval);
+            delay(FLASH_INTERVAL);
           }
 
           wait_until_pressed_debounced(J_START | J_A | J_B);
@@ -780,6 +786,7 @@ GameOver:
 
         food_counter++;
         if (food_counter >= current_food_threshold) {
+
           /*  Time to show an animal */
           step_counter = 20;
 
@@ -790,8 +797,10 @@ GameOver:
           /*  Draw a random position to place the animal */
 
           animal_pos = get_random_free_food_position(&snake, 1);
+          if (animal_pos.x == NO_FREE_FIELDS_AVAILABLE){
+            goto GameOver;
+          }
 
-#define NB_OF_DIFFERENT_ANIMALS 6
           shown_animal_type = rand() % NB_OF_DIFFERENT_ANIMALS;
           uint8_t sprite_x = PLAYFIELD_TO_SPRITE_X_POS(animal_pos.x);
           uint8_t sprite_y = PLAYFIELD_TO_SPRITE_Y_POS(animal_pos.y);
