@@ -23,7 +23,7 @@
 #define NB_OF_DIFFERENT_ANIMALS 6
 #define MAX_LEVEL (9)
 #define MIN_LEVEL (1)
-#define START_DIRECTION (UP)
+#define START_DIRECTION (RIGHT)
 
 /*  The playfield has the coordinates
  *  x = [0 -17]
