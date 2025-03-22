@@ -14,6 +14,15 @@
 
 #define EMPTY_TILE_MAIN (0)
 #define FULL_BAR_TILE_MAIN (39)
+#define STARTPOS_X ((160 / 8) / 2)
+#define STARTPOS_Y ((144 / 8) / 2)
+#define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
+#define PLAYFIELD_TO_SPRITE_X_POS(X) ((X * 8) + 16)
+#define PLAYFIELD_TO_SPRITE_Y_POS(Y) ((4 * 8) + 16 + (8 * Y))
+#define PLAYFIELD_TO_GLOBAL_X_POS(X) (X + 1) /* border */
+#define PLAYFIELD_TO_GLOBAL_Y_POS(Y)                                           \
+  (Y + PLAYFIELD_Y_OFFSET) /* borders + 2 for score */
+
 
 typedef enum {
   UP,

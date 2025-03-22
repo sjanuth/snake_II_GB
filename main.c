@@ -21,15 +21,9 @@
 #define TILE_SIZE (16) /*  8x8 Bits and 2 bit color */
 #define FLASH_INTERVAL ((1600 / 4) / 2)
 #define NB_OF_DIFFERENT_ANIMALS 6
-#define OPPOSITE_DIRECTION(X) ((X + 2) % 4)
-#define PLAYFIELD_TO_SPRITE_X_POS(X) ((X * 8) + 16)
-#define PLAYFIELD_TO_SPRITE_Y_POS(Y) ((4 * 8) + 16 + (8 * Y))
-#define PLAYFIELD_TO_GLOBAL_X_POS(X) (X + 1) /* border */
-#define PLAYFIELD_TO_GLOBAL_Y_POS(Y)                                           \
-  (Y + PLAYFIELD_Y_OFFSET) /* borders + 2 for score */
-
 #define MAX_LEVEL (9)
 #define MIN_LEVEL (1)
+#define START_DIRECTION (UP)
 
 /*  The playfield has the coordinates
  *  x = [0 -17]
@@ -39,8 +33,6 @@
 #define PLAYFIELD_Y_MAX (12)
 #define PLAYFIELD_SIZE ((PLAYFIELD_X_MAX + 1) * (PLAYFIELD_Y_MAX + 1))
 #define GBP_FPS 60
-#define STARTPOS_X ((160 / 8) / 2)
-#define STARTPOS_Y ((144 / 8) / 2)
 #define STEP_POS_X ((160 / 8) - 2)
 #define STEP_POS_Y (1)
 #define NO_FREE_FIELDS_AVAILABLE (255)
@@ -413,63 +405,16 @@ GameStart:
   score = 0;
   render_score(&score);
 
-  snake_direction = RIGHT;
-  dpad_direction = RIGHT;
+  snake_direction = START_DIRECTION;
+  dpad_direction = START_DIRECTION;
 
   uint16_t i;
   for (i = 0; i < MAX_NODES; i++) {
     freeNode(&node_pool[i]);
   }
 
-  snake_node_t *snake_head = allocateNode();
-  if (snake_head) {
-    snake_head->x_pos = STARTPOS_X;
-    snake_head->y_pos = STARTPOS_Y;
-    snake_head->prev_node = NULL;
-    snake_head->next_node = NULL;
-    snake_head->tile_to_render = SNAKE_HEAD_RIGHT_TILE;
-    snake_head->dir_to_next_node = LEFT;
-  };
-
-  snake_node_t *snake_first_node = allocateNode();
-  if (snake_first_node) {
-    snake_first_node->x_pos = STARTPOS_X - 1;
-    snake_first_node->y_pos = STARTPOS_Y;
-    snake_first_node->prev_node = snake_head;
-    snake_first_node->next_node = NULL;
-    snake_first_node->tile_to_render = SNAKE_BODY_STRAIGHT_RIGHT;
-    snake_first_node->dir_to_next_node = LEFT;
-  };
-
-  snake_head->next_node = snake_first_node;
-
-  snake_node_t *snake_second_node = allocateNode();
-  if (snake_second_node) {
-    snake_second_node->x_pos = STARTPOS_X - 2;
-    snake_second_node->y_pos = STARTPOS_Y;
-    snake_second_node->prev_node = snake_first_node;
-    snake_second_node->next_node = NULL;
-    snake_second_node->tile_to_render = SNAKE_BODY_STRAIGHT_RIGHT;
-    snake_second_node->dir_to_next_node = LEFT;
-  };
-
-  snake_first_node->next_node = snake_second_node;
-
-  snake_node_t *snake_tail = allocateNode();
-  if (snake_tail) {
-    snake_tail->x_pos = STARTPOS_X - 3;
-    snake_tail->y_pos = STARTPOS_Y;
-    snake_tail->prev_node = snake_second_node;
-    snake_tail->next_node = NULL;
-    snake_tail->tile_to_render = SNAKE_TAIL_RIGHT;
-  };
-
-  snake_second_node->next_node = snake_tail;
-
-  snake_t snake = {
-      .head = snake_head,
-      .tail = snake_tail,
-  };
+  snake_t snake;
+  init_default_snake(&snake);
 
   /*  render the snake for the first time */
 
@@ -889,57 +834,57 @@ GameOver:
       uint8_t food_lies_ahead = 0;
       switch (snake_direction) {
       case UP:
-        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
+        if (snake.head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
           break;
         };
-        if (snake_head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
+        if (snake.head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_BOTTOM) {
-          if (snake_head->y_pos - 1 < PLAYFIELD_Y_OFFSET) {
+          if (snake.head->y_pos - 1 < PLAYFIELD_Y_OFFSET) {
             food_lies_ahead = 1;
           }
         }
         break;
       case RIGHT:
-        if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
+        if (snake.head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
           break;
         };
-        if (snake_head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
+        if (snake.head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == 1) {
-          if (snake_head->x_pos + 1 > PLAYFIELD_WIDTH) {
+          if (snake.head->x_pos + 1 > PLAYFIELD_WIDTH) {
             food_lies_ahead = 1;
           }
         }
         break;
       case DOWN:
-        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
+        if (snake.head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
           break;
         };
-        if (snake_head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
+        if (snake.head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y) == PLAYFIELD_Y_OFFSET) {
-          if (snake_head->y_pos + 1 > PLAYFIELD_BOTTOM) {
+          if (snake.head->y_pos + 1 > PLAYFIELD_BOTTOM) {
             food_lies_ahead = 1;
           }
         }
         break;
       case LEFT:
-        if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
+        if (snake.head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(food_pos.y)) {
           break;
         };
-        if (snake_head->x_pos - 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
+        if (snake.head->x_pos - 1 == PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_X_POS(food_pos.x) == PLAYFIELD_WIDTH) {
-          if (snake_head->x_pos - 1 < 1) {
+          if (snake.head->x_pos - 1 < 1) {
             food_lies_ahead = 1;
           }
         }
@@ -949,62 +894,62 @@ GameOver:
 
       switch (snake_direction) {
       case UP:
-        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) &&
-            snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
+        if (snake.head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) &&
+            snake.head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
           break;
         };
-        if (snake_head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
+        if (snake.head->y_pos - 1 == PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y) == PLAYFIELD_BOTTOM) {
-          if (snake_head->y_pos - 1 < PLAYFIELD_Y_OFFSET) {
+          if (snake.head->y_pos - 1 < PLAYFIELD_Y_OFFSET) {
             food_lies_ahead = 1;
           }
         }
         break;
       case RIGHT:
-        if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
+        if (snake.head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
           break;
         };
-        if (snake_head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x)) {
+        if (snake.head->x_pos + 1 == PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) == 1) {
-          if (snake_head->x_pos + 1 > PLAYFIELD_WIDTH) {
+          if (snake.head->x_pos + 1 > PLAYFIELD_WIDTH) {
             food_lies_ahead = 1;
           }
         }
         break;
       case DOWN:
-        if (snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) &&
-            snake_head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
+        if (snake.head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x) &&
+            snake.head->x_pos != PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
           break;
         };
-        if (snake_head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
+        if (snake.head->y_pos + 1 == PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y) ==
                  PLAYFIELD_Y_OFFSET) {
-          if (snake_head->y_pos + 1 > PLAYFIELD_BOTTOM) {
+          if (snake.head->y_pos + 1 > PLAYFIELD_BOTTOM) {
             food_lies_ahead = 1;
           }
         }
         break;
       case LEFT:
-        if (snake_head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
+        if (snake.head->y_pos != PLAYFIELD_TO_GLOBAL_Y_POS(animal_pos.y)) {
           break;
         };
-        if (snake_head->x_pos - 1 ==
+        if (snake.head->x_pos - 1 ==
             PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1)) {
           food_lies_ahead = 1;
         }
         /* Check wrapped around position */
         else if (PLAYFIELD_TO_GLOBAL_X_POS(animal_pos.x + 1) ==
                  PLAYFIELD_WIDTH) {
-          if (snake_head->x_pos - 1 < 1) {
+          if (snake.head->x_pos - 1 < 1) {
             food_lies_ahead = 1;
           }
         }
@@ -1012,17 +957,19 @@ GameOver:
 
       /*  Update background tiles */
 
+      snake_node_t *node_after_head = snake.head->next_node;
+      set_bkg_tile_xy(node_after_head->x_pos, node_after_head->y_pos,
+                      node_after_head->tile_to_render);
+      set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
+                      snake.tail->tile_to_render);
+
       if (food_lies_ahead) {
         set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos,
                         snake_direction + SNAKE_MOUTH_OPEN_UP);
       } else {
         set_bkg_tile_xy(snake.head->x_pos, snake.head->y_pos, snake_direction);
       }
-      snake_node_t *node_after_head = snake.head->next_node;
-      set_bkg_tile_xy(node_after_head->x_pos, node_after_head->y_pos,
-                      node_after_head->tile_to_render);
-      set_bkg_tile_xy(snake.tail->x_pos, snake.tail->y_pos,
-                      snake.tail->tile_to_render);
+
     }
     update_screen_counter++;
 

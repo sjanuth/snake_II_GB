@@ -20,11 +20,12 @@ typedef struct snake_s {
   snake_node_t *tail;
 } snake_t;
 
-snake_node_t *allocateNode(void) ;
+snake_node_t *allocateNode(void);
 
-void freeNode(snake_node_t* obj) ;
+void freeNode(snake_node_t* obj);
 
 uint8_t checkPointForCollision(snake_t *snake, uint8_t x, uint8_t y);
 
+void init_default_snake(snake_t *snake);
 
 #endif
